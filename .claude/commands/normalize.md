@@ -5,7 +5,7 @@ argument-hint: <파일 경로(들), 비우면 pages/ 전체>
 
 대상: $ARGUMENTS (비어 있으면 `pages/` 전체)
 
-`AGENTS.md` 규약과 `pages/12-glossary.md` 용어집을 기준으로 다음을 점검·수정합니다.
+`AGENTS.md` 규약과 `pages/14-glossary.md` 용어집을 기준으로 다음을 점검·수정합니다.
 
 - 용어 표기 통일 (용어집과 다른 표기를 맞춤, 처음 등장 시 영문 병기)
 - 한국어 합니다체로 문체 통일

@@ -92,3 +92,13 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 
 ![alt text](../assets/02-npu-hw-architecture-basic/image-6.png)
 *[Figure 5. Overall architecture of RNGD and the internal components of the Processing Element (PE)] from Hot Chips 2024*
+
+---
+
+## Reference
+
+- [Qualcomm Cloud AI 100 Architecture](https://quic.github.io/cloud-ai-sdk-pages/1.11/Getting-Started/Architecture/)
+- [Rebellions Whitepaper](https://rebellions.ai/wp-content/uploads/2026/03/Rebellions_Whitepaper_EN_v.01.pdf)
+- [NVIDIA H100 Tensor Core GPU Architecture Whitepaper](https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c)
+- [Tensor Contraction Processor (FuriosaAI RNGD, IEEE Micro 2025)](https://web.ist.utl.pt/nuno.lopes/pubs/tcp-micro25.pdf)
+

@@ -39,7 +39,7 @@ Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 �
 이 과정에서 Off-chip memory access 횟수를 줄이는 것이 NPU 성능 최적화의 핵심이다. Tiling 전략과 SRAM 크기 사이의 균형이 컴파일러 최적화에서 가장 까다로운 문제 중 하나이기도 하다.
 
 ### ATOM Neural Engine
-![alt text](../assets/02-npu-hw-architecture-basic/image.png)
+![alt text](../assets/02-npu-hw-architecture-basic/image.png)  
 *[Figure 2. ATOM™ Neural Engine] from Rebellions Whitepaper*
 
 ---
@@ -60,7 +60,7 @@ Rebellions의 ATOM은 Samsung 5nm EUV 공정으로 제조된 AI 추론 전용 So
   - 16GB GDDR6 Off-chip DRAM (256 GB/s bandwidth)
 - **호스트 인터페이스**: PCIe Gen5 x16
 
-![alt text](../assets/02-npu-hw-architecture-basic/image-1.png)
+![alt text](../assets/02-npu-hw-architecture-basic/image-1.png)  
 *[Figure 1. ATOM™ Multi-layered SoC Architecture] from Rebellions Whitepaper*
 
 SoC나 HW 등에 익숙하지 않으면 생소할 수 있으나, 대부분의 AI 가속기의 구조가 이러한 계층 구조를 따른다.
@@ -69,10 +69,10 @@ SoC나 HW 등에 익숙하지 않으면 생소할 수 있으나, 대부분의 AI
 
 H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결하여 하나의 칩을 구성한다"는 기본 패턴은 동일하다. 132개의 SM이 하나의 칩을 이루며, 각 SM 내부에 Tensor Core(행렬 연산), CUDA Core(범용 연산), Warp Scheduler, Shared Memory/L1 Cache가 배치되어 있다.
 
-![alt text](../assets/02-npu-hw-architecture-basic/image-2.png)
+![alt text](../assets/02-npu-hw-architecture-basic/image-2.png)  
 *[Figure 7. GH100 Streaming Multiprocessor (SM)] from NVIDIA Whitepaper*
 
-![alt text](../assets/02-npu-hw-architecture-basic/image-3.png)
+![alt text](../assets/02-npu-hw-architecture-basic/image-3.png)  
 *[Figure 6. GH100 Full GPU with 144 SMs] from NVIDIA Whitepaper*
 
 
@@ -90,7 +90,7 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 
 8개의 PE(Processing Element)로 구성된다. 각 PE 내부에 CPU Core(제어), Tensor Unit(행렬 연산), Tensor DMA가 있으며, PE를 최대 4개까지 묶어 하나의 큰 연산 단위로 동작시킬 수 있다.
 
-![alt text](../assets/02-npu-hw-architecture-basic/image-6.png)
+![alt text](../assets/02-npu-hw-architecture-basic/image-6.png)  
 *[Figure 5. Overall architecture of RNGD and the internal components of the Processing Element (PE)] from Hot Chips 2024*
 
 ---

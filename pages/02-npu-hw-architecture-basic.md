@@ -1,10 +1,13 @@
-# NPU HW architecture: AI 추론을 위한 전용 하드웨어
+# 02. NPU HW architecture: AI 추론을 위한 전용 하드웨어
 
 ## 1. NPU 코어 구조 기본
 
-AI 추론 전용 프로세서(NPU, Neural Processing Unit)의 코어는 크게 다섯 가지 기능 블록으로 나뉜다. 벤더마다 명칭은 다르지만 기본 구성은 거의 동일하다.
+AI 추론 전용 프로세서(NPU, Neural Processing Unit)의 코어는 크게 다섯 가지 블록으로 나뉜다. 벤더마다 명칭은 다르지만 기본 구성은 거의 동일하다. 이 절에서는 Rebellions ATOM Neural Engine을 기준으로 각 블록의 역할을 설명한다.
 
-### Matrix Processor
+![ATOM Neural Engine](../assets/02-npu-hw-architecture-basic/image.png)  
+*[Figure 2. ATOM™ Neural Engine] from Rebellions Whitepaper*
+
+### Tensor Processor
 
 행렬 곱셈(GEMM)과 행렬 덧셈을 처리하는 핵심 연산기다. PyTorch 기준으로 `torch.matmul`, `nn.Linear`, `nn.Conv2d` 등이 이 유닛에서 실행된다. AI 추론 워크로드에서 전체 연산량의 대부분을 차지하기 때문에, NPU 설계에서 가장 많은 실리콘 면적과 전력 예산이 이 유닛에 할당된다.
 
@@ -19,28 +22,26 @@ Qualcomm Cloud AI 100의 AI Core는 클럭당 8,192(INT8) 또는 4,096(FP16) MAC
 - **활성화 함수**: ReLU, GELU, SiLU, Softmax
 - **기타**: 원소별 덧셈, 곱셈, 타입 캐스팅 등
 
-Matrix Processor가 Dense GEMM에 특화된 고정적 구조라면, Vector Processor는 SIMD(Single Instruction, Multiple Data) 방식으로 다양한 비선형 연산을 유연하게 처리한다.
+Tensor Processor가 Dense GEMM에 특화된 고정적 구조라면, Vector Processor는 SIMD(Single Instruction, Multiple Data) 방식으로 다양한 비선형 연산을 유연하게 처리한다.
 
 ### DMA Engine
 
 Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 이동을 담당한다. CPU가 관여하지 않고 DMA 하드웨어가 독립적으로 전송을 수행하므로, 연산기가 계산하는 동안 다음 데이터를 미리 가져오는 식의 파이프라이닝이 가능하다. 컴파일러가 컴파일 시점에 DMA 전송 스케줄을 미리 생성하여, 연산과 데이터 이동이 최대한 겹치도록(overlap) 최적화하는 것이 일반적이다.
 
-### Control Unit
+### Task Manager
 
-컴파일러가 미리 생성해 둔 Instruction 시퀀스를 읽어 각 연산기(Matrix Processor, Vector Processor, DMA Engine)에 명령을 디스패치한다.  
+컴파일러가 미리 생성해 둔 Instruction 시퀀스를 읽어 각 연산기(Tensor Processor, Vector Processor, DMA Engine)에 명령을 디스패치한다. 타 벤더에서는 일반적으로 Control Unit이라고 부르는 블록이다.  
 일반적으로, NPU는 GPU와 달리 런타임에 동적으로 스케줄링하는 것이 아니라, 컴파일러가 정적으로 결정한 실행 순서를 하드웨어가 그대로 따르는 구조가 많다.  
 이 덕분에 제어 로직이 단순해지고, 제어 로직이 단순해진 만큼 연산 유닛에 트랜지스터를 더 할당할 수 있다.
 
-### SRAM (Scratchpad Memory)
+### Scratch Pad Memory
 
-일반적으로, Off-chip 메모리의 bandwidth는 연산기의 처리 속도에 비해 훨씬 느리다. 이 격차를 줄이기 위해 코어 내부에 SRAM을 두고, 데이터를 한 번 가져오면 최대한 재사용(data reuse)한 뒤에 내보낸다.
+일반적으로, Off-chip 메모리의 bandwidth는 연산기의 처리 속도에 비해 훨씬 느리다. 이 격차를 줄이기 위해 코어 내부에 Scratch Pad Memory를 두고, 데이터를 한 번 가져오면 최대한 재사용(data reuse)한 뒤에 내보낸다. 타 벤더에서는 SRAM(Static Random Access Memory) 또는 Local SRAM이라고 부르기도 한다.
 
-예를 들어 거대한 행렬 곱셈을 한 번에 처리할 수 없으므로, 행렬을 타일(tile) 단위로 쪼개어 SRAM에 올리고 연산한 뒤, 다음 타일을 가져오는 방식으로 진행한다.  
-이 과정에서 Off-chip memory access 횟수를 줄이는 것이 NPU 성능 최적화의 핵심이다. Tiling 전략과 SRAM 크기 사이의 균형이 컴파일러 최적화에서 가장 까다로운 문제 중 하나이기도 하다.
+예를 들어 거대한 행렬 곱셈을 한 번에 처리할 수 없으므로, 행렬을 타일(tile) 단위로 쪼개어 Scratch Pad Memory에 올리고 연산한 뒤, 다음 타일을 가져오는 방식으로 진행한다.  
+이 과정에서 Off-chip memory access 횟수를 줄이는 것이 NPU 성능 최적화의 핵심이다. Tiling 전략과 Scratch Pad Memory 크기 사이의 균형이 컴파일러 최적화에서 가장 까다로운 문제 중 하나이기도 하다.
 
-### ATOM Neural Engine
-![alt text](../assets/02-npu-hw-architecture-basic/image.png)  
-*[Figure 2. ATOM™ Neural Engine] from Rebellions Whitepaper*
+이 다섯 가지 블록(Tensor Processor, Vector Processor, DMA Engine, Task Manager, Scratch Pad Memory)이 모여 하나의 NPU 코어를 구성한다. 다음 절에서는 이 코어를 N개 배열하고 NoC로 연결한 SoC 구조를 살펴본다.
 
 ---
 
@@ -78,7 +79,7 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 
 ### 추가 예시 2: Qualcomm Cloud AI 100
 
-16개의 AI Core가 NoC로 연결된 구조다. 각 AI Core 내부에 Matrix/Vector Processor와 Local SRAM이 있으며, Off-chip 메모리로 LPDDR4x를 사용한다.
+16개의 AI Core가 NoC로 연결된 구조다. 각 AI Core 내부에 Matrix/Vector Processor와 Local SRAM이 있으며, Off-chip 메모리로 LPDDR4X를 사용한다.
 
 ![alt text](../assets/02-npu-hw-architecture-basic/image-4.png)  
 *[Qualcomm AI Core] from Qualcomm Architecture*

@@ -41,7 +41,12 @@ Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 �
 예를 들어 거대한 행렬 곱셈을 한 번에 처리할 수 없으므로, 행렬을 타일(tile) 단위로 쪼개어 Scratch Pad Memory에 올리고 연산한 뒤, 다음 타일을 가져오는 방식으로 진행한다.  
 이 과정에서 Off-chip memory access 횟수를 줄이는 것이 NPU 성능 최적화의 핵심이다. Tiling 전략과 Scratch Pad Memory 크기 사이의 균형이 컴파일러 최적화에서 가장 까다로운 문제 중 하나이기도 하다.
 
-이 다섯 가지 블록(Tensor Processor, Vector Processor, DMA Engine, Task Manager, Scratch Pad Memory)이 모여 하나의 NPU 코어를 구성한다. 다음 절에서는 이 코어를 N개 배열하고 NoC로 연결한 SoC 구조를 살펴본다.
+이 다섯 가지 블록(Tensor Processor, Vector Processor, DMA Engine, Task Manager, Scratch Pad Memory)이 모여 하나의 NPU 코어를 구성한다. 벤더 명칭을 걷어내고 데이터 흐름만 그리면 아래와 같은 형태가 된다. MAC Array가 Tensor Processor, Shared On-Chip Buffer가 Scratch Pad Memory, NPU Controller/Scheduler가 Task Manager에 해당하고, Off-Chip DRAM과 버퍼 사이를 DMA Engine이 오간다.
+
+![NPU 코어의 일반적인 데이터 흐름](../assets/02-npu-hw-architecture-basic/image-7.jpeg)  
+*[Generic NPU Compute Core Dataflow] by Ong Soon Ee*
+
+다음 절에서는 이 코어를 N개 배열하고 NoC로 연결한 SoC 구조를 살펴본다.
 
 ---
 

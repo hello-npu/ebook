@@ -2,7 +2,7 @@
 
 * [01. NPU란 무엇인가 / GPU vs NPU](pages/01-npu-intro.md)
 * [02. 리벨리온 NPU & RBLN SDK 시작하기](pages/02-rbln-sdk.md)
-* [03. 첫 모델 올리기](pages/03-first-model.md)
+* [03. Model Optimization: NPU 100% 활용하기](pages/03-model-optimization.md)
 * [04. 모델 컴파일과 최적화](pages/04-compile-optimize.md)
 * [05. 비전·NLP 모델 구동기](pages/05-vision-nlp.md)
 * [06. 생명과학 모델 도전기](pages/06-bio-models.md)

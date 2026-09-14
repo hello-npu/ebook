@@ -4,7 +4,7 @@
 
 AI 추론 전용 프로세서(NPU, Neural Processing Unit)의 코어는 크게 다섯 가지 블록으로 나뉜다. 벤더마다 명칭은 다르지만 기본 구성은 거의 동일하다. 이 절에서는 Rebellions ATOM Neural Engine을 기준으로 각 블록의 역할을 설명한다.
 
-![ATOM Neural Engine](../assets/02-npu-hw-architecture-basic/image.png)  
+![ATOM Neural Engine](../assets/02-npu-hw-architecture-basic/atom-neural-engine.png)  
 *[Figure 2. ATOM™ Neural Engine] from Rebellions Whitepaper*
 
 ### Tensor Processor
@@ -66,7 +66,7 @@ Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 �
 이 다섯 가지 블록(Tensor Processor, Vector Processor, DMA Engine, Task Manager, Scratch Pad Memory)이 모여 하나의 NPU 코어를 구성한다.  
 벤더 명칭을 걷어내고 데이터 흐름만 그리면 아래와 같은 형태가 된다. MAC Array가 Tensor Processor, Shared On-Chip Buffer가 Scratch Pad Memory, NPU Controller/Scheduler가 Task Manager에 해당하고, Off-Chip DRAM과 버퍼 사이를 DMA Engine이 오간다.
 
-![NPU 코어의 일반적인 데이터 흐름](../assets/02-npu-hw-architecture-basic/image-7.jpeg)  
+![NPU 코어의 일반적인 데이터 흐름](../assets/02-npu-hw-architecture-basic/generic-npu-core-dataflow.jpeg)  
 *[Generic NPU Compute Core Dataflow] by Ong Soon Ee*
 
 다음 절에서는 이 코어를 N개 배열하고 NoC로 연결한 SoC 구조를 살펴본다.
@@ -89,7 +89,7 @@ Rebellions의 ATOM은 Samsung 5nm EUV 공정으로 제조된 AI 추론 전용 So
   - 16GB GDDR6 Off-chip DRAM (256 GB/s bandwidth)
 - **호스트 인터페이스**: PCIe Gen5 x16
 
-![alt text](../assets/02-npu-hw-architecture-basic/image-1.png)  
+![ATOM SoC 아키텍처](../assets/02-npu-hw-architecture-basic/atom-soc-architecture.png)  
 *[Figure 1. ATOM™ Multi-layered SoC Architecture] from Rebellions Whitepaper*
 
 SoC나 HW 등에 익숙하지 않으면 생소할 수 있으나, 대부분의 AI 가속기의 구조가 이러한 계층 구조를 따른다.
@@ -98,10 +98,10 @@ SoC나 HW 등에 익숙하지 않으면 생소할 수 있으나, 대부분의 AI
 
 H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결하여 하나의 칩을 구성한다"는 기본 패턴은 동일하다. 132개의 SM이 하나의 칩을 이루며, 각 SM 내부에 Tensor Core(행렬 연산), CUDA Core(범용 연산), Warp Scheduler, Shared Memory/L1 Cache가 배치되어 있다.
 
-![alt text](../assets/02-npu-hw-architecture-basic/image-2.png)  
+![GH100 SM 아키텍처](../assets/02-npu-hw-architecture-basic/gh100-sm-architecture.png)  
 *[Figure 7. GH100 Streaming Multiprocessor (SM)] from NVIDIA Whitepaper*
 
-![alt text](../assets/02-npu-hw-architecture-basic/image-3.png)  
+![GH100 Full GPU](../assets/02-npu-hw-architecture-basic/gh100-full-gpu.png)  
 *[Figure 6. GH100 Full GPU with 144 SMs] from NVIDIA Whitepaper*
 
 
@@ -109,17 +109,17 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 
 16개의 AI Core가 NoC로 연결된 구조다. 각 AI Core 내부에 Matrix/Vector Processor와 Local SRAM이 있으며, Off-chip 메모리로 LPDDR4X를 사용한다.
 
-![alt text](../assets/02-npu-hw-architecture-basic/image-4.png)  
+![Qualcomm AI Core](../assets/02-npu-hw-architecture-basic/qualcomm-ai-core.png)  
 *[Qualcomm AI Core] from Qualcomm Architecture*
 
-![alt text](../assets/02-npu-hw-architecture-basic/image-5.png)  
+![Qualcomm Cloud AI 100 SoC](../assets/02-npu-hw-architecture-basic/qualcomm-cloud-ai100-soc.png)  
 *[Qualcomm Cloud AI 100 SoC] from Qualcomm Architecture*
 
 ### 추가 예시 3: FuriosaAI RNGD
 
 8개의 PE(Processing Element)로 구성된다. 각 PE 내부에 CPU Core(제어), Tensor Unit(행렬 연산), Tensor DMA가 있으며, PE를 최대 4개까지 묶어 하나의 큰 연산 단위로 동작시킬 수 있다.
 
-![alt text](../assets/02-npu-hw-architecture-basic/image-6.png)  
+![FuriosaAI RNGD 아키텍처](../assets/02-npu-hw-architecture-basic/furiosaai-rngd-architecture.png)  
 *[Figure 5. Overall architecture of RNGD and the internal components of the Processing Element (PE)] from Hot Chips 2024*
 
 ---

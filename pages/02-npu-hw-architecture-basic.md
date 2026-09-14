@@ -28,8 +28,8 @@ Tensor Processor가 Dense GEMM에 특화된 고정적 구조라면, Vector Proce
 
 Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 이동을 담당한다. CPU가 관여하지 않고 DMA 하드웨어가 독립적으로 전송을 수행하므로, 연산기가 계산하는 동안 다음 데이터를 미리 가져오는 식의 파이프라이닝이 가능하다. 컴파일러가 컴파일 시점에 DMA 전송 스케줄을 미리 생성하여, 연산과 데이터 이동이 최대한 겹치도록(overlap) 최적화하는 것이 일반적이다.
 
-#### Pipeline
-@조만재 님, 여기에 내용 추가 가능할까요!!
+> **Pipeline**  
+> @조만재 님, 여기에 내용 추가 가능할까요!!
 
 ### Task Manager
 
@@ -44,16 +44,24 @@ Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 �
 예를 들어 거대한 행렬 곱셈을 한 번에 처리할 수 없으므로, 행렬을 타일(tile) 단위로 쪼개어 Scratch Pad Memory에 올리고 연산한 뒤, 다음 타일을 가져오는 방식으로 진행한다.  
 이 과정에서 Off-chip memory access 횟수를 줄이는 것이 NPU 성능 최적화의 핵심이다. Tiling 전략과 Scratch Pad Memory 크기 사이의 균형이 컴파일러 최적화에서 가장 까다로운 문제 중 하나이기도 하다.
 
-#### SRAM과 DRAM(LPDDR/GDDR/HBM 등) 비교
+> **SRAM과 DRAM(LPDDR/GDDR/HBM 등) 비교**
+>
+> - **SRAM (Static RAM)**: NPU 칩 내부에 위치하며, 연산 유닛이 자주 사용하는 데이터를 저장한다.
+> - **DRAM (Dynamic RAM)**: NPU 칩 외부에 위치하며, 모델의 전체 Weight나 대규모 Activation 등 많은 양의 데이터를 저장한다.
+>
+> SRAM은 DRAM보다 용량은 작지만 훨씬 짧은 지연시간과 높은 대역폭을 제공한다.  
+> 반대로 DRAM은 상대적으로 느리지만 훨씬 큰 용량을 제공하므로 대규모 모델을 저장할 수 있다.
+>
+> 예를 들어 Rebellions ATOM은 다음과 같은 메모리 계층을 사용한다.
+>
+> |  | On-chip SRAM | Off-chip GDDR6 |
+> |---|---|---|
+> | **위치** | NPU SoC 내부 | NPU SoC 외부 |
+> | **용량** | 64 MB | 16 GB |
+> | **용도** | 연산 중간 데이터, Tile | Weight, 대규모 Activation |
+> | **대역폭** | 최대 8 TB/s 수준의 SRAM 접근 | 256 GB/s |
+> | **특징** | 작지만 매우 빠름 | 크지만 상대적으로 느림 |
 
-- SRAM (Static RAM): NPU 칩 내부에 위치하며, 연산 유닛이 자주 사용하는 데이터를 저장한다.
-- DRAM (Dynamic RAM): NPU 칩 외부에 위치하며, 모델의 전체 Weight나 대규모 Activation 등 많은 양의 데이터를 저장한다.
-
-SRAM은 DRAM보다 용량은 작지만 훨씬 짧은 지연시간과 높은 대역폭을 제공한다.  
-반대로 DRAM은 상대적으로 느리지만 훨씬 큰 용량을 제공하므로 대규모 모델을 저장할 수 있다.
-
-예를 들어 Rebellions ATOM은 다음과 같은 메모리 계층을 사용한다.
-~내용 추가 예정~
 
 이 다섯 가지 블록(Tensor Processor, Vector Processor, DMA Engine, Task Manager, Scratch Pad Memory)이 모여 하나의 NPU 코어를 구성한다.  
 벤더 명칭을 걷어내고 데이터 흐름만 그리면 아래와 같은 형태가 된다. MAC Array가 Tensor Processor, Shared On-Chip Buffer가 Scratch Pad Memory, NPU Controller/Scheduler가 Task Manager에 해당하고, Off-Chip DRAM과 버퍼 사이를 DMA Engine이 오간다.

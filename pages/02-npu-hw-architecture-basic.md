@@ -150,6 +150,13 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 ![FuriosaAI RNGD 아키텍처](../assets/02-npu-hw-architecture-basic/furiosaai-rngd-architecture.png)  
 *[Figure 5. Overall architecture of RNGD and the internal components of the Processing Element (PE)] from Hot Chips 2024*
 
+### 정리
+
+벤더마다 부르는 고유 명칭은 다르지만, AI 가속기의 구조적 본질은 다음 두 가지 패턴으로 수렴합니다.
+
+1. **단일 코어 계층**: 연산 효율을 극대화하기 위해 **행렬 연산기(Tensor)**, **벡터 연산기(Vector)**, **로컬 버퍼(Scratch Pad Memory)**, **데이터 이동기(DMA)**, **명령 제어기(Task Manager)** 의 5대 블록을 기본 단위로 구성합니다.
+2. **SoC 계층**: 독립된 코어를 복수 개 배치하고 **NoC(Network-on-Chip)** 로 묶어 확장하며, 고대역폭 외부 메모리(HBM/GDDR/LPDDR)와 SRAM을 두어 메모리 병목을 완화합니다.
+
 ---
 
 ## 참고
@@ -158,3 +165,4 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 - [Rebellions Whitepaper](https://rebellions.ai/wp-content/uploads/2026/03/Rebellions_Whitepaper_EN_v.01.pdf)
 - [NVIDIA H100 Tensor Core GPU Architecture Whitepaper](https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c)
 - [Tensor Contraction Processor (FuriosaAI RNGD, IEEE Micro 2025)](https://web.ist.utl.pt/nuno.lopes/pubs/tcp-micro25.pdf)
+

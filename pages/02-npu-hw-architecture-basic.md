@@ -100,7 +100,15 @@ SoC나 HW 등에 익숙하지 않으면 생소할 수 있지만, 대부분의 AI
 
 ### 추가 예시 1: NVIDIA H100
 
-H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결하여 하나의 칩을 구성한다"는 기본 패턴은 동일합니다. 132개의 SM이 하나의 칩을 이루며, 각 SM 내부에 Tensor Core(행렬 연산), CUDA Core(범용 연산), Warp Scheduler, Shared Memory/L1 Cache가 배치되어 있습니다.
+H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결하여 하나의 칩을 구성한다"는 기본 패턴은 동일합니다. 132개의 SM이 하나의 칩을 이루며, 각 SM 내부에 Tensor Core(행렬 연산), CUDA Core(범용 연산), Warp Scheduler, Shared Memory/L1 Cache, 그리고 비동기 데이터 전송을 전담하는 TMA(Tensor Memory Accelerator)가 배치되어 있습니다.
+
+| ATOM 블록 | H100 대응 요소 |
+|---|---|
+| Tensor Processor | Tensor Core |
+| Vector Processor | CUDA Core (범용 SIMT 연산) |
+| Scratch Pad Memory | Shared Memory / L1 Cache |
+| DMA Engine | TMA (Tensor Memory Accelerator) |
+| Task Manager | Warp Scheduler |
 
 ![GH100 SM 아키텍처](../assets/02-npu-hw-architecture-basic/gh100-sm-architecture.png)  
 *[Figure 7. GH100 Streaming Multiprocessor (SM)] from NVIDIA Whitepaper*
@@ -111,7 +119,15 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 
 ### 추가 예시 2: Qualcomm Cloud AI 100
 
-16개의 AI Core가 NoC로 연결된 구조입니다. 각 AI Core 내부에 Matrix/Vector Processor와 Local SRAM이 있으며, Off-chip 메모리로 LPDDR4X를 사용합니다.
+16개의 AI Core가 NoC로 연결된 구조입니다. 각 AI Core 내부에 Matrix/Vector Unit과 TCM이 있으며, Off-chip 메모리로 LPDDR4X를 사용합니다.
+
+| ATOM 블록 | Qualcomm Cloud AI 100 대응 요소 |
+|---|---|
+| Tensor Processor | Tensor Unit |
+| Vector Processor | Vector Unit |
+| Scratch Pad Memory | TCM |
+| DMA Engine | DMA Engine |
+| Task Manager | Scalar Processor |
 
 ![Qualcomm AI Core](../assets/02-npu-hw-architecture-basic/qualcomm-ai-core.png)  
 *[Qualcomm AI Core] from Qualcomm Architecture*
@@ -121,7 +137,15 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 
 ### 추가 예시 3: FuriosaAI RNGD
 
-8개의 PE(Processing Element)로 구성됩니다. 각 PE 내부에 CPU Core(제어), Tensor Unit(행렬 연산), Tensor DMA가 있으며, PE를 최대 4개까지 묶어 하나의 큰 연산 단위로 동작시킬 수 있습니다.
+8개의 PE(Processing Element)로 구성됩니다. 각 PE 내부에 CPU Core, Contraction Engine, Vector Engine, Tensor DMA가 있으며, PE를 최대 4개까지 묶어 하나의 큰 연산 단위로 동작시킬 수 있습니다.
+
+| ATOM 블록 | FuriosaAI RNGD 대응 요소 |
+|---|---|
+| Tensor Processor | Contraction Engine |
+| Vector Processor | Vector Engine |
+| Scratch Pad Memory | Scratchpad Memory |
+| DMA Engine | Tensor DMA |
+| Task Manager | CPU Core |
 
 ![FuriosaAI RNGD 아키텍처](../assets/02-npu-hw-architecture-basic/furiosaai-rngd-architecture.png)  
 *[Figure 5. Overall architecture of RNGD and the internal components of the Processing Element (PE)] from Hot Chips 2024*

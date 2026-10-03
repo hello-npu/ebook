@@ -57,8 +57,16 @@ Tensor Processor가 Dense GEMM에 특화된 고정적 구조라면, Vector Proce
 
 Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 이동을 담당합니다. CPU가 관여하지 않고 DMA 하드웨어가 독립적으로 전송을 수행하므로, 연산기가 계산하는 동안 다음 데이터를 미리 가져오는 식의 파이프라이닝이 가능합니다. 컴파일러가 컴파일 시점에 DMA 전송 스케줄을 미리 생성하여, 연산과 데이터 이동이 최대한 겹치도록(overlap) 최적화하는 것이 일반적입니다.
 
-> **Pipeline**  
-> @조만재 님, 여기에 내용 추가 가능할까요!!
+#### Pipeline
+
+파이프라인(pipeline)은 데이터 전송과 연산을 타일(tile) 단위로 나누어 겹쳐 실행하는 방식입니다. Tensor Processor가 현재 타일을 연산하는 동안 DMA Engine은 다음 타일을 SRAM으로 가져옵니다. 파이프라인을 적용하지 않으면 타일마다 전송이 끝난 뒤 연산하고, 연산이 끝난 뒤 다음 타일을 전송합니다. 전송과 연산을 겹치면 연산기가 데이터를 기다리는 시간을 줄여 활용도를 높일 수 있습니다.
+
+각 타일의 연산은 해당 타일의 전송이 완료된 뒤 시작해야 합니다. 또한 연산 중인 데이터를 덮어쓰지 않도록 버퍼 공간을 구분해야 합니다. 예를 들어 더블 버퍼링(double buffering)은 두 버퍼를 번갈아 사용하여, 한 버퍼의 데이터를 연산하는 동안 다른 버퍼에 다음 타일을 적재하는 방법입니다.
+
+![타일별 DMA 전송과 Tensor Processor 연산의 파이프라인 적용 전후 비교](../assets/02-npu-hw-architecture-basic/dma-compute-pipeline.png)  
+*자체 제작한 DMA 전송·연산 파이프라인 비교 개념도. 각 타일은 전송 완료 후 연산하며, 서로 다른 타일의 전송과 연산을 겹칩니다.*
+
+그림은 각 타일의 전송 시간과 연산 시간이 같은 단순화한 예시입니다. 실제 겹침의 범위와 성능 향상은 전송 대역폭, 연산 시간, 버퍼 자원에 따라 달라집니다.
 
 ### Task Manager
 
@@ -165,4 +173,5 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 - [Rebellions Whitepaper](https://rebellions.ai/wp-content/uploads/2026/03/Rebellions_Whitepaper_EN_v.01.pdf)
 - [NVIDIA H100 Tensor Core GPU Architecture Whitepaper](https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c)
 - [Tensor Contraction Processor (FuriosaAI RNGD, IEEE Micro 2025)](https://web.ist.utl.pt/nuno.lopes/pubs/tcp-micro25.pdf)
+- [Apache TVM: VTA Hardware Design Overview](https://tvm.apache.org/2018/07/12/vta-release-announcement.html)
 

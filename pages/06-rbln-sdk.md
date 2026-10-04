@@ -257,3 +257,65 @@ print('Top-1 Predicted Class:', pred_class)
 2026-10-03 10:46:44,347 INFO [rebel-compiler] Load model completed. Elasped time: 0:00:00
 Top-1 Predicted Class: tabby
 ```
+
+## 6. Llama3.2-1B eager mode 실행
+
+[RBLN SDK Llama 튜토리얼](https://docs.rbln.ai/v0.11.2/ko/software/rbln_pytorch/tutorial_llama.html)을 참조합니다.
+
+### 실행
+연산 장치 지정을 cuda 또는 cpu 대신 rbln으로 변경하는 부분을 제외하면, GPU 또는 CPU 환경에서 사용하는 코드와 동일한 구성입니다.
+
+```python
+import re
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model_name = "meta-llama/Llama-3.2-1B"
+device = "rbln"
+
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    torch_dtype=torch.float16,
+    device_map=None,
+)
+model.to(device)
+
+prompt = "What is the capital of Korea?"
+inputs = tokenizer(prompt, return_tensors="pt")
+
+input_ids = inputs["input_ids"].to(device)
+attention_mask = inputs["attention_mask"].to(device)
+
+outputs = model.generate(
+    input_ids,
+    attention_mask=attention_mask,
+    pad_token_id=tokenizer.pad_token_id,
+    max_new_tokens=64,
+    num_return_sequences=1,
+    do_sample=False,
+    top_p=None,
+    temperature=None,
+)
+
+prompt_length_tokens = input_ids.shape[1]
+generated_text = tokenizer.decode(
+    outputs[0][prompt_length_tokens:], skip_special_tokens=True
+).strip()
+generated_text = re.sub(r"\[duplicate\]\n?", "", generated_text)
+
+print(f"Q: {prompt}")
+print(f"A: {generated_text}")
+```
+
+### 실행 결과
+
+```text
+Q: What is the capital of Korea?
+A: Seoul
+Seoul is the capital and largest city of South Korea. It is located in the southeastern part of the country and is known for its vibrant culture, rich history, and modern architecture. Seoul is home to many famous landmarks, including the Gyeongbokgung Palace, the Bukchon Hanok
+```

@@ -271,7 +271,7 @@ import re
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-model_name = "meta-llama/Llama-3.2-1B"
+model_name = "meta-llama/Llama-3.2-1B-Instruct"
 device = "rbln"
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)

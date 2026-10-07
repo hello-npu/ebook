@@ -319,3 +319,135 @@ Q: What is the capital of Korea?
 A: Seoul
 Seoul is the capital and largest city of South Korea. It is located in the southeastern part of the country and is known for its vibrant culture, rich history, and modern architecture. Seoul is home to many famous landmarks, including the Gyeongbokgung Palace, the Bukchon Hanok
 ```
+
+
+## 7. vLLM w/ OpenAI Compatible Server
+
+https://docs.rbln.ai/v0.10.1/ko/software/model_serving/vllm_support/tutorial/openai_api_server.html를 기반으로 하였습니다.  
+버전에 따라 argument 차이가 있으므로 주의해야 합니다.
+
+### 모델 컴파일
+
+```python
+from optimum.rbln import RBLNLlamaForCausalLM
+
+# Define the HuggingFace model ID
+model_id = "meta-llama/Llama-3.2-1B-Instruct"
+
+# Compile the model for 1 RBLN NPUs
+compiled_model = RBLNLlamaForCausalLM.from_pretrained(
+    model_id=model_id,
+    export=True,
+    rbln_batch_size=4,
+    rbln_max_seq_len=8192,
+    rbln_tensor_parallel_size=1,
+)
+
+compiled_model.save_pretrained("rbln-Llama-3.2-1B-Instruct")
+```
+
+컴파일 로그는 아래와 같고, Prefill과 Decode Stage 각각에 대해 컴파일을 하는 것으로 관찰됩니다.
+
+```bash
+(rbln-env) juwon@cloud-9li96L:~$ python3 vllm-compile.py
+2026-10-07 22:20:30,725 INFO [rebel-compiler] -- Target NPU: RBLN-CA22
+2026-10-07 22:20:30,725 INFO [rebel-compiler] -- Tensor parallel size: 1
+2026-10-07 22:20:32,139 INFO [rebel-compiler] Export done. Elapsed time: 0:00:01
+2026-10-07 22:20:40,106 INFO [rebel-compiler] Exported model conversion done. Elapsed time: 0:00:05, Memory change: 2.73 MB
+2026-10-07 22:20:40,186 INFO [rebel-compiler] RBLN SDK compiler version: 0.10.1
+2026-10-07 22:20:40,187 INFO [rebel-compiler] -- Target NPU: RBLN-CA22
+2026-10-07 22:20:40,187 INFO [rebel-compiler] -- Tensor parallel size: 1
+2026-10-07 22:20:40,188 INFO [rebel-compiler] +------------------------------------------------+
+2026-10-07 22:20:40,188 INFO [rebel-compiler] |Compile(#0), mod_name=71f467, input_info_index=0|
+2026-10-07 22:20:40,188 INFO [rebel-compiler] +------------------------------------------------+
+Computation graph generation ████████████████████████████████████████ 100% 00:03
+Computation graph optimization  ████████████████████████████████████████ 100% 00:02
+2026-10-07 22:21:09,518 INFO [rebel-compiler] Export done. Elapsed time: 0:00:00
+2026-10-07 22:21:17,985 INFO [rebel-compiler] Exported model conversion done. Elapsed time: 0:00:05, Memory change: 0.00 MB
+2026-10-07 22:21:18,055 INFO [rebel-compiler] RBLN SDK compiler version: 0.10.1
+2026-10-07 22:21:18,056 INFO [rebel-compiler] -- Target NPU: RBLN-CA22
+2026-10-07 22:21:18,056 INFO [rebel-compiler] -- Tensor parallel size: 1
+2026-10-07 22:21:18,056 INFO [rebel-compiler] +------------------------------------------------+
+2026-10-07 22:21:18,056 INFO [rebel-compiler] |Compile(#1), mod_name=71f467, input_info_index=1|
+2026-10-07 22:21:18,056 INFO [rebel-compiler] +------------------------------------------------+
+Computation graph generation ████████████████████████████████████████ 100% 00:03
+Computation graph optimization  ████████████████████████████████████████ 100% 00:03
+2026-10-07 22:21:42,523 INFO [rebel-compiler] Serializing compiled model to /tmp/tmp2kx09wbw/prefill.rbln ...
+2026-10-07 22:21:46,560 INFO [rebel-compiler] Compiled model serialized. Elasped time: 0:00:04
+2026-10-07 22:21:46,560 INFO [rebel-compiler] Serializing compiled model to /tmp/tmp2kx09wbw/decoder_batch_4.rbln ...
+2026-10-07 22:21:47,260 INFO [rebel-compiler] Compiled model serialized. Elasped time: 0:00:00
+```
+
+### OpenAI API Server 실행
+
+아래 명령어와 같이 컴파일한 모델 경로를 입력하여 실행하면 로그가 출력되며 서버가 실행됩니다.
+
+```bash
+(rbln-env) juwon@cloud-9li96L:~$ vllm serve ./rbln-Llama-3.2-1B-Instruct/
+INFO 10-07 21:56:27 [__init__.py:43] Available plugins for group vllm.platform_plugins:
+INFO 10-07 21:56:27 [__init__.py:45] - rbln -> vllm_rbln:register
+INFO 10-07 21:56:27 [__init__.py:48] All plugins in this group will be loaded. Set `VLLM_PLUGINS` to control which plugins to load.
+INFO 10-07 21:56:27 [__init__.py:217] Platform plugin rbln is activated
+[vllm-rbln] INFO 2026-10-07 21:56:30,085 [importing.py:44] Triton is installed but 0 active driver(s) found (expected 1). Disabling Triton to prevent runtime errors.
+[vllm-rbln] INFO 2026-10-07 21:56:30,085 [importing.py:68] Triton not installed or not compatible; certain GPU-related functions will not be available.
+[vllm-rbln] WARNING 2026-10-07 21:56:32,163 [registry.py:774] Model architecture Gemma3ForConditionalGeneration is already registered, and will be overwritten by the new model class vllm_rbln.model_executor.models.optimum.gemma3:RBLNOptimumGemma3ForConditionalGeneration.
+(APIServer pid=14521) [vllm-rbln] INFO 2026-10-07 21:56:32,186 [api_server.py:1351] vLLM API server version 0.13.0
+(APIServer pid=14521) [vllm-rbln] INFO 2026-10-07 21:56:32,189 [utils.py:253] non-default args: {'model_tag': './rbln-Llama-3.2-1B-Instruct/', 'model': './rbln-Llama-3.2-1B-Instruct/'}
+(APIServer pid=14521) [vllm-rbln] INFO 2026-10-07 21:56:32,195 [model.py:514] Resolved architecture: LlamaForCausalLM
+(APIServer pid=14521) [vllm-rbln] INFO 2026-10-07 21:56:32,195 [model.py:2002] Downcasting torch.float32 to torch.bfloat16.
+(APIServer pid=14521) [vllm-rbln] INFO 2026-10-07 21:56:32,195 [model.py:1661] Using max model len 131072
+
+(중략)
+
+(APIServer pid=14521) INFO:     127.0.0.1:58422 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(APIServer pid=14521) [vllm-rbln] INFO 2026-10-07 22:01:17,796 [loggers.py:248] Engine 000: Avg prompt throughput: 4.1 tokens/s, Avg generation throughput: 6.2 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%
+(APIServer pid=14521) [vllm-rbln] INFO 2026-10-07 22:01:27,796 [loggers.py:248] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%
+(APIServer pid=14521) INFO:     127.0.0.1:60278 - "GET /health HTTP/1.1" 200 OK
+(APIServer pid=14521) INFO:     127.0.0.1:39464 - "GET /health HTTP/1.1" 200 OK
+(APIServer pid=14521) INFO:     127.0.0.1:48844 - "GET /v1/models HTTP/1.1" 200 OK
+(APIServer pid=14521) INFO:     127.0.0.1:54804 - "GET /health/ready HTTP/1.1" 404 Not Found
+```
+
+실행 후에는 rbln-smi로 vLLM 프로세스가 NPU device에 할당된 것을 볼 수 있습니다.
+
+```bash
+juwon@cloud-9li96L:~$ rbln-smi
+Wed Oct 7 22:09:34 2026
++-------------------------------------------------------------------------------------------------+
+|                                Device Information KMD ver: 3.0.0                                |
++-----+-----------+---------+---------------+------+---------+------+---------------------+-------+
+| NPU |    Name   | Device  |   PCI BUS ID  | Temp |  Power  | Perf |  Memory(used/total) |  Util |
++=====+===========+=========+===============+======+=========+======+=====================+=======+
+| 0   | RBLN-CA22 | rbln0   |  0000:24:00.0 |  41C |  25.6W  | P14  |   3.6GiB / 15.7GiB  |   0.0 |
++-----+-----------+---------+---------------+------+---------+------+---------------------+-------+
++-------------------------------------------------------------------------------------------------+
+|                                       Context Information                                       |
++-----+---------------------+--------------+-----------+----------+------+---------------+--------+
+| NPU | Process             |     PID      |    CTX    | Priority | PTID |      Memalloc | Status |
++=====+=====================+==============+===========+==========+======+===============+========+
+| 0   | VLLM::EngineCore    |    14576     |   10001   |  normal  |  0   |        3.4GiB |  idle  |
+| 0   | VLLM::EngineCore    |    14576     |   20001   |  normal  |  1   |          0.0B |  idle  |
+| 0   | VLLM::EngineCore    |    14576     |   30001   |  normal  |  2   |      184.0MiB |  idle  |
++-----+---------------------+--------------+-----------+----------+------+---------------+--------+
+```
+
+또한, 아래 명령어로 서빙 중인 모델 정보도 확인하고 모델이 정상적으로 alive임을 확인할 수 있습니다.
+
+```bash
+juwon@cloud-9li96L:~$ curl http://localhost:8000/v1/models
+{"object":"list","data":[{"id":"./rbln-Llama-3.2-1B-Instruct/","object":"model","created":1791378156,"owned_by":"vllm","root":"./rbln-Llama-3.2-1B-Instruct/","parent":null,"max_model_len":8192,"permission":[{"id":"modelperm-8a43223c951b5551","object":"model_permission","created":1791378156,"allow_create_engine":false,"allow_sampling":true,"allow_logprobs":true,"allow_search_indices":false,"allow_view":true,"allow_fine_tuning":false,"orgcurl http://localhost:8000/health/readyg":false}]}]}
+```
+
+마지막으로, 아래 명령어를 통해 LLM에게 질문을 하고 답변을 받아볼 수 있습니다.
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+-H "Content-Type: application/json" \
+-d '{
+    "model": "./rbln-Llama-3.2-1B-Instruct/",
+    "messages": [
+    {"role": "user", "content": "Hello, how are you?"}
+    ],
+    "max_tokens": 100
+}'
+```

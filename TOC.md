@@ -1,7 +1,7 @@
 # 목차
 
 * [01. NPU란 무엇인가 / GPU vs NPU](pages/01-npu-intro.md)
-* [02. 리벨리온 NPU & RBLN SDK 시작하기](pages/02-rbln-sdk.md)
+* [02. NPU HW architecture: AI 추론을 위한 전용 하드웨어](pages/02-npu-hw-architecture-basic.md)
 * [03. Model Optimization: NPU 100% 활용하기](pages/03-model-optimization.md)
 * [04. 모델 컴파일과 최적화](pages/04-compile-optimize.md)
 * [05. 비전·NLP 모델 구동기](pages/05-vision-nlp.md)

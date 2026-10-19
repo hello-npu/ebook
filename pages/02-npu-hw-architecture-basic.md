@@ -2,11 +2,11 @@
 
 ## 개요
 
-AI 추론 전용 프로세서(NPU, Neural Processing Unit)의 코어는 크게 다섯 가지 블록으로 나뉩니다. 벤더마다 명칭은 다르지만 기본 구성은 거의 동일합니다. 이 장에서는 단일 코어의 내부 구조를 먼저 살펴본 뒤, 여러 코어를 배열하여 하나의 칩(SoC)을 구성하는 방식을 다룹니다. 읽고 나면 NPU의 하드웨어 계층 구조를 전반적으로 이해할 수 있습니다.
+AI 추론 전용 프로세서(NPU, Neural Processing Unit)의 코어는 크게 다섯 가지 블록으로 나뉩니다. 벤더마다 명칭은 다르지만 기본 구성은 거의 동일합니다. 이 장에서는 단일 코어의 내부 구조를 먼저 살펴본 뒤, 여러 코어를 배열하여 하나의 칩(SoC, System-on-Chip)을 구성하는 방식을 다룹니다. 읽고 나면 NPU의 하드웨어 계층 구조를 전반적으로 이해할 수 있습니다.
 
 ## 1. NPU 코어 구조 기본
 
-Rebellions ATOM Neural Engine을 기준으로 각 블록의 역할을 설명합니다.
+리벨리온(Rebellions) ATOM Neural Engine을 기준으로 각 블록의 역할을 설명합니다.
 
 ![ATOM Neural Engine](../assets/02-npu-hw-architecture-basic/atom-neural-engine.png)
 
@@ -16,7 +16,7 @@ Rebellions ATOM Neural Engine을 기준으로 각 블록의 역할을 설명합�
 
 행렬 곱셈(GEMM)과 행렬 덧셈을 처리하는 핵심 연산기입니다. PyTorch 기준으로 `torch.matmul`, `nn.Linear`, `nn.Conv2d` 등이 이 유닛에서 실행됩니다. AI 추론 워크로드에서 전체 연산량의 대부분을 차지하기 때문에, NPU 설계에서 가장 많은 실리콘 면적과 전력 예산이 이 유닛에 할당됩니다.
 
-구현 방식은 벤더에 따라 갈립니다. Google TPU의 MXU는 128x128 고정 크기의 Systolic Array를 사용하고, NVIDIA GPU의 Tensor Core는 소형(예: 16x8x32) 행렬 연산 유닛을 SM마다 여러 개 배치합니다.
+구현 방식은 벤더에 따라 갈립니다. Google TPU의 MXU는 128x128 고정 크기의 시스톨릭 어레이(Systolic Array)를 사용하고, NVIDIA GPU의 Tensor Core는 소형(예: 16x8x32) 행렬 연산 유닛을 SM마다 여러 개 배치합니다.
 
 ### 1.2 Vector Processor
 
@@ -30,11 +30,11 @@ Tensor Processor가 Dense GEMM에 특화된 고정적 구조라면, Vector Proce
 
 ### 1.3 Scratch Pad Memory
 
-일반적으로 Off-chip 메모리의 bandwidth는 연산기의 처리 속도에 비해 훨씬 느립니다. 이 격차를 줄이기 위해 코어 내부에 Scratch Pad Memory를 두고, 데이터를 한 번 가져오면 최대한 재사용(data reuse)한 뒤에 내보냅니다. 타 벤더에서는 SRAM(Static Random Access Memory) 또는 Local SRAM이라고 부르기도 합니다.
+일반적으로 칩 외부 메모리(Off-chip memory)의 대역폭(bandwidth)은 연산기의 처리 속도에 비해 훨씬 느립니다. 이 격차를 줄이기 위해 코어 내부에 Scratch Pad Memory를 두고, 데이터를 한 번 가져오면 최대한 재사용(data reuse)한 뒤에 내보냅니다. 타 벤더에서는 SRAM(Static Random Access Memory) 또는 Local SRAM이라고 부르기도 합니다.
 
 예를 들어 거대한 행렬 곱셈을 한 번에 처리할 수 없으므로, 행렬을 타일(tile) 단위로 쪼개어 Scratch Pad Memory에 올리고 연산한 뒤, 다음 타일을 가져오는 방식으로 진행합니다.
 
-이 과정에서 Off-chip memory access 횟수를 줄이는 것이 NPU 성능 최적화의 핵심입니다. Tiling 전략과 Scratch Pad Memory 크기 사이의 균형이 컴파일러 최적화에서 가장 까다로운 문제 중 하나이기도 합니다.
+이 과정에서 칩 외부 메모리 접근(off-chip memory access) 횟수를 줄이는 것이 NPU 성능 최적화의 핵심입니다. Tiling 전략과 Scratch Pad Memory 크기 사이의 균형이 컴파일러 최적화에서 가장 까다로운 문제 중 하나이기도 합니다.
 
 > **SRAM과 DRAM(LPDDR/GDDR/HBM 등) 비교**
 >
@@ -45,7 +45,7 @@ Tensor Processor가 Dense GEMM에 특화된 고정적 구조라면, Vector Proce
 >
 > 반대로 DRAM은 상대적으로 느리지만 훨씬 큰 용량을 제공하므로 대규모 모델을 저장할 수 있습니다.
 >
-> 예를 들어 Rebellions ATOM은 다음과 같은 메모리 계층을 사용합니다[1].
+> 예를 들어 리벨리온 ATOM은 다음과 같은 메모리 계층을 사용합니다[1].
 >
 > |  | On-chip SRAM | Off-chip GDDR6 |
 > |---|---|---|
@@ -57,7 +57,7 @@ Tensor Processor가 Dense GEMM에 특화된 고정적 구조라면, Vector Proce
 
 ### 1.4 DMA Engine
 
-Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 이동을 담당합니다. CPU가 관여하지 않고 DMA 하드웨어가 독립적으로 전송을 수행하므로, 연산기가 계산하는 동안 다음 데이터를 미리 가져오는 식의 파이프라이닝이 가능합니다. 컴파일러가 컴파일 시점에 DMA 전송 스케줄을 미리 생성하여, 연산과 데이터 이동이 최대한 겹치도록(overlap) 최적화하는 것이 일반적입니다.
+Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 이동을 담당합니다. CPU가 관여하지 않고 DMA(Direct Memory Access) 하드웨어가 독립적으로 전송을 수행하므로, 연산기가 계산하는 동안 다음 데이터를 미리 가져오는 식의 파이프라이닝이 가능합니다. 컴파일러가 컴파일 시점에 DMA 전송 스케줄을 미리 생성하여, 연산과 데이터 이동이 최대한 겹치도록(overlap) 최적화하는 것이 일반적입니다.
 
 #### Pipeline
 
@@ -95,9 +95,9 @@ Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 �
 
 하나의 모델이나 연산을 여러 코어에 분할(partitioning)하여 병렬로 처리할 수 있고, 반대로 코어별로 서로 다른 모델을 독립적으로 실행할 수도 있습니다.
 
-### 2.1 Rebellions ATOM SoC
+### 2.1 리벨리온 ATOM SoC
 
-Rebellions의 ATOM은 Samsung 5nm EUV 공정으로 제조된 AI 추론 전용 SoC입니다[1].
+리벨리온의 ATOM은 Samsung 5nm EUV 공정으로 제조된 AI 추론 전용 SoC입니다[1].
 
 - **코어 구성**: 8개의 Neural Engine(ION 코어)이 NoC로 연결
 - **메모리 계층**:

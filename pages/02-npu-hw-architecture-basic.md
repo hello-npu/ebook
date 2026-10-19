@@ -11,7 +11,7 @@ Rebellions ATOM Neural Engine을 기준으로 각 블록의 역할을 설명합�
 ![ATOM Neural Engine](../assets/02-npu-hw-architecture-basic/atom-neural-engine.png)
 *[Figure 2. ATOM™ Neural Engine] from Rebellions Whitepaper*
 
-### Tensor Processor
+### 1.1 Tensor Processor
 
 행렬 곱셈(GEMM)과 행렬 덧셈을 처리하는 핵심 연산기입니다. PyTorch 기준으로 `torch.matmul`, `nn.Linear`, `nn.Conv2d` 등이 이 유닛에서 실행됩니다. AI 추론 워크로드에서 전체 연산량의 대부분을 차지하기 때문에, NPU 설계에서 가장 많은 실리콘 면적과 전력 예산이 이 유닛에 할당됩니다.
 
@@ -19,7 +19,7 @@ Rebellions ATOM Neural Engine을 기준으로 각 블록의 역할을 설명합�
 
 Qualcomm Cloud AI 100의 AI Core는 클럭당 8,192(INT8) 또는 4,096(FP16) MAC 연산을 처리합니다.
 
-### Vector Processor
+### 1.2 Vector Processor
 
 행렬 곱셈이 아닌, 원소 단위(element-wise) 연산을 담당합니다.
 
@@ -29,7 +29,7 @@ Qualcomm Cloud AI 100의 AI Core는 클럭당 8,192(INT8) 또는 4,096(FP16) MAC
 
 Tensor Processor가 Dense GEMM에 특화된 고정적 구조라면, Vector Processor는 SIMD(Single Instruction, Multiple Data) 방식으로 다양한 비선형 연산을 유연하게 처리합니다.
 
-### Scratch Pad Memory
+### 1.3 Scratch Pad Memory
 
 일반적으로 Off-chip 메모리의 bandwidth는 연산기의 처리 속도에 비해 훨씬 느립니다. 이 격차를 줄이기 위해 코어 내부에 Scratch Pad Memory를 두고, 데이터를 한 번 가져오면 최대한 재사용(data reuse)한 뒤에 내보냅니다. 타 벤더에서는 SRAM(Static Random Access Memory) 또는 Local SRAM이라고 부르기도 합니다.
 
@@ -56,7 +56,7 @@ Tensor Processor가 Dense GEMM에 특화된 고정적 구조라면, Vector Proce
 > | **대역폭** | 최대 8 TB/s 수준의 SRAM 접근 | 256 GB/s |
 > | **특징** | 작지만 매우 빠름 | 크지만 상대적으로 느림 |
 
-### DMA Engine
+### 1.4 DMA Engine
 
 Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 이동을 담당합니다. CPU가 관여하지 않고 DMA 하드웨어가 독립적으로 전송을 수행하므로, 연산기가 계산하는 동안 다음 데이터를 미리 가져오는 식의 파이프라이닝이 가능합니다. 컴파일러가 컴파일 시점에 DMA 전송 스케줄을 미리 생성하여, 연산과 데이터 이동이 최대한 겹치도록(overlap) 최적화하는 것이 일반적입니다.
 
@@ -71,7 +71,7 @@ Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 �
 
 그림은 각 타일의 전송 시간과 연산 시간이 같은 단순화한 예시입니다. 실제 겹침의 범위와 성능 향상은 전송 대역폭, 연산 시간, 버퍼 자원에 따라 달라집니다.
 
-### Task Manager
+### 1.5 Task Manager
 
 컴파일러가 미리 생성해 둔 Instruction 시퀀스를 읽어 각 연산기(Tensor Processor, Vector Processor, DMA Engine)에 명령을 디스패치합니다. 타 벤더에서는 일반적으로 Control Unit이라고 부르는 블록입니다.
 
@@ -94,7 +94,7 @@ Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 �
 
 하나의 모델이나 연산을 여러 코어에 분할(partitioning)하여 병렬로 처리할 수 있고, 반대로 코어별로 서로 다른 모델을 독립적으로 실행할 수도 있습니다.
 
-### 대표 예시: Rebellions ATOM SoC
+### 2.1 Rebellions ATOM SoC
 
 Rebellions의 ATOM은 Samsung 5nm EUV 공정으로 제조된 AI 추론 전용 SoC입니다.
 
@@ -110,7 +110,7 @@ Rebellions의 ATOM은 Samsung 5nm EUV 공정으로 제조된 AI 추론 전용 So
 
 SoC나 HW 등에 익숙하지 않으면 생소할 수 있지만, 대부분의 AI 가속기가 이러한 계층 구조를 따릅니다.
 
-### 추가 예시 1: NVIDIA H100
+### 2.2 NVIDIA H100
 
 H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결하여 하나의 칩을 구성한다"는 기본 패턴은 동일합니다. 132개의 SM이 하나의 칩을 이루며, 각 SM 내부에 Tensor Core(행렬 연산), CUDA Core(범용 연산), Warp Scheduler, Shared Memory/L1 Cache, 그리고 비동기 데이터 전송을 전담하는 TMA(Tensor Memory Accelerator)가 배치되어 있습니다.
 
@@ -128,7 +128,7 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 ![GH100 Full GPU](../assets/02-npu-hw-architecture-basic/gh100-full-gpu.png)
 *[Figure 6. GH100 Full GPU with 144 SMs] from NVIDIA Whitepaper*
 
-### 추가 예시 2: Qualcomm Cloud AI 100
+### 2.3 Qualcomm Cloud AI 100
 
 16개의 AI Core가 NoC로 연결된 구조입니다. 각 AI Core 내부에 Matrix/Vector Unit과 TCM이 있으며, Off-chip 메모리로 LPDDR4X를 사용합니다.
 
@@ -146,7 +146,7 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 ![Qualcomm Cloud AI 100 SoC](../assets/02-npu-hw-architecture-basic/qualcomm-cloud-ai100-soc.png)
 *[Qualcomm Cloud AI 100 SoC] from Qualcomm Architecture*
 
-### 추가 예시 3: FuriosaAI RNGD
+### 2.4 FuriosaAI RNGD
 
 8개의 PE(Processing Element)로 구성됩니다. 각 PE 내부에 CPU Core, Contraction Engine, Vector Engine, Tensor DMA가 있으며, PE를 최대 4개까지 묶어 하나의 큰 연산 단위로 동작시킬 수 있습니다.
 
@@ -161,7 +161,7 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 ![FuriosaAI RNGD 아키텍처](../assets/02-npu-hw-architecture-basic/furiosaai-rngd-architecture.png)
 *[Figure 5. Overall architecture of RNGD and the internal components of the Processing Element (PE)] from Hot Chips 2024*
 
-### 정리
+## 정리
 
 벤더마다 부르는 고유 명칭은 다르지만, AI 가속기의 구조적 본질은 다음 두 가지 패턴으로 수렴합니다.
 

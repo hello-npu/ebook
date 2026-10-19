@@ -9,15 +9,14 @@ AI 추론 전용 프로세서(NPU, Neural Processing Unit)의 코어는 크게 �
 Rebellions ATOM Neural Engine을 기준으로 각 블록의 역할을 설명합니다.
 
 ![ATOM Neural Engine](../assets/02-npu-hw-architecture-basic/atom-neural-engine.png)
-*[Figure 2. ATOM™ Neural Engine] from Rebellions Whitepaper*
+
+*그림 2-1. ATOM Neural Engine 블록 다이어그램. 출처: [1] Figure 2*
 
 ### 1.1 Tensor Processor
 
 행렬 곱셈(GEMM)과 행렬 덧셈을 처리하는 핵심 연산기입니다. PyTorch 기준으로 `torch.matmul`, `nn.Linear`, `nn.Conv2d` 등이 이 유닛에서 실행됩니다. AI 추론 워크로드에서 전체 연산량의 대부분을 차지하기 때문에, NPU 설계에서 가장 많은 실리콘 면적과 전력 예산이 이 유닛에 할당됩니다.
 
 구현 방식은 벤더에 따라 갈립니다. Google TPU의 MXU는 128x128 고정 크기의 Systolic Array를 사용하고, NVIDIA GPU의 Tensor Core는 소형(예: 16x8x32) 행렬 연산 유닛을 SM마다 여러 개 배치합니다.
-
-Qualcomm Cloud AI 100의 AI Core는 클럭당 8,192(INT8) 또는 4,096(FP16) MAC 연산을 처리합니다.
 
 ### 1.2 Vector Processor
 
@@ -46,7 +45,7 @@ Tensor Processor가 Dense GEMM에 특화된 고정적 구조라면, Vector Proce
 >
 > 반대로 DRAM은 상대적으로 느리지만 훨씬 큰 용량을 제공하므로 대규모 모델을 저장할 수 있습니다.
 >
-> 예를 들어 Rebellions ATOM은 다음과 같은 메모리 계층을 사용합니다.
+> 예를 들어 Rebellions ATOM은 다음과 같은 메모리 계층을 사용합니다[1].
 >
 > |  | On-chip SRAM | Off-chip GDDR6 |
 > |---|---|---|
@@ -67,7 +66,8 @@ Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 �
 각 타일의 연산은 해당 타일의 전송이 완료된 뒤 시작해야 합니다. 또한 연산 중인 데이터를 덮어쓰지 않도록 버퍼 공간을 구분해야 합니다. 예를 들어 더블 버퍼링(double buffering)은 두 버퍼를 번갈아 사용하여, 한 버퍼의 데이터를 연산하는 동안 다른 버퍼에 다음 타일을 적재하는 방법입니다.
 
 ![타일별 DMA 전송과 Tensor Processor 연산의 파이프라인 적용 전후 비교](../assets/02-npu-hw-architecture-basic/dma-compute-pipeline.png)
-*자체 제작한 DMA 전송·연산 파이프라인 비교 개념도. 각 타일은 전송 완료 후 연산하며, 서로 다른 타일의 전송과 연산을 겹칩니다.*
+
+*그림 2-2. 타일별 DMA 전송과 연산의 파이프라인 적용 전후 비교. 출처: 직접 제작*
 
 그림은 각 타일의 전송 시간과 연산 시간이 같은 단순화한 예시입니다. 실제 겹침의 범위와 성능 향상은 전송 대역폭, 연산 시간, 버퍼 자원에 따라 달라집니다.
 
@@ -84,7 +84,8 @@ Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 �
 벤더 명칭을 걷어내고 데이터 흐름만 그리면 아래와 같은 형태가 됩니다. MAC Array가 Tensor Processor, Shared On-Chip Buffer가 Scratch Pad Memory, NPU Controller/Scheduler가 Task Manager에 해당하고, Off-Chip DRAM과 버퍼 사이를 DMA Engine이 오갑니다.
 
 ![NPU 코어의 일반적인 데이터 흐름](../assets/02-npu-hw-architecture-basic/generic-npu-core-dataflow.jpeg)
-*[Generic NPU Compute Core Dataflow] by Ong Soon Ee*
+
+*그림 2-3. NPU 코어의 일반적인 데이터 흐름. 출처: [2]*
 
 다음 절에서는 이 코어를 N개 배열하고 NoC로 연결한 SoC 구조를 살펴봅니다.
 
@@ -96,7 +97,7 @@ Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 �
 
 ### 2.1 Rebellions ATOM SoC
 
-Rebellions의 ATOM은 Samsung 5nm EUV 공정으로 제조된 AI 추론 전용 SoC입니다.
+Rebellions의 ATOM은 Samsung 5nm EUV 공정으로 제조된 AI 추론 전용 SoC입니다[1].
 
 - **코어 구성**: 8개의 Neural Engine(ION 코어)이 NoC로 연결
 - **메모리 계층**:
@@ -106,13 +107,14 @@ Rebellions의 ATOM은 Samsung 5nm EUV 공정으로 제조된 AI 추론 전용 So
 - **호스트 인터페이스**: PCIe Gen5 x16
 
 ![ATOM SoC 아키텍처](../assets/02-npu-hw-architecture-basic/atom-soc-architecture.png)
-*[Figure 1. ATOM™ Multi-layered SoC Architecture] from Rebellions Whitepaper*
+
+*그림 2-4. ATOM 다계층 SoC 아키텍처. 출처: [1] Figure 1*
 
 SoC나 HW 등에 익숙하지 않으면 생소할 수 있지만, 대부분의 AI 가속기가 이러한 계층 구조를 따릅니다.
 
 ### 2.2 NVIDIA H100
 
-H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결하여 하나의 칩을 구성한다"는 기본 패턴은 동일합니다. 132개의 SM이 하나의 칩을 이루며, 각 SM 내부에 Tensor Core(행렬 연산), CUDA Core(범용 연산), Warp Scheduler, Shared Memory/L1 Cache, 그리고 비동기 데이터 전송을 전담하는 TMA(Tensor Memory Accelerator)가 배치되어 있습니다.
+H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결하여 하나의 칩을 구성한다"는 기본 패턴은 동일합니다. 132개의 SM이 하나의 칩을 이루며, 각 SM 내부에 Tensor Core(행렬 연산), CUDA Core(범용 연산), Warp Scheduler, Shared Memory/L1 Cache, 그리고 비동기 데이터 전송을 전담하는 TMA(Tensor Memory Accelerator)가 배치되어 있습니다[3].
 
 | ATOM 블록 | H100 대응 요소 |
 |---|---|
@@ -123,14 +125,16 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 | Task Manager | Warp Scheduler |
 
 ![GH100 SM 아키텍처](../assets/02-npu-hw-architecture-basic/gh100-sm-architecture.png)
-*[Figure 7. GH100 Streaming Multiprocessor (SM)] from NVIDIA Whitepaper*
+
+*그림 2-5. GH100 Streaming Multiprocessor(SM) 아키텍처. 출처: [3] Figure 7*
 
 ![GH100 Full GPU](../assets/02-npu-hw-architecture-basic/gh100-full-gpu.png)
-*[Figure 6. GH100 Full GPU with 144 SMs] from NVIDIA Whitepaper*
+
+*그림 2-6. 144개 SM으로 구성된 GH100 전체 GPU 구조. 출처: [3] Figure 6*
 
 ### 2.3 Qualcomm Cloud AI 100
 
-16개의 AI Core가 NoC로 연결된 구조입니다. 각 AI Core 내부에 Matrix/Vector Unit과 TCM이 있으며, Off-chip 메모리로 LPDDR4X를 사용합니다.
+16개의 AI Core가 NoC로 연결된 구조입니다. 각 AI Core 내부에 Matrix/Vector Unit과 TCM이 있으며, Off-chip 메모리로 LPDDR4X를 사용합니다. 각 AI Core는 클럭당 8,192(INT8) 또는 4,096(FP16) MAC 연산을 처리합니다[4].
 
 | ATOM 블록 | Qualcomm Cloud AI 100 대응 요소 |
 |---|---|
@@ -141,14 +145,16 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 | Task Manager | Scalar Processor |
 
 ![Qualcomm AI Core](../assets/02-npu-hw-architecture-basic/qualcomm-ai-core.png)
-*[Qualcomm AI Core] from Qualcomm Architecture*
+
+*그림 2-7. Qualcomm AI Core 아키텍처. 출처: [4]*
 
 ![Qualcomm Cloud AI 100 SoC](../assets/02-npu-hw-architecture-basic/qualcomm-cloud-ai100-soc.png)
-*[Qualcomm Cloud AI 100 SoC] from Qualcomm Architecture*
+
+*그림 2-8. Qualcomm Cloud AI 100 SoC 구성. 출처: [4]*
 
 ### 2.4 FuriosaAI RNGD
 
-8개의 PE(Processing Element)로 구성됩니다. 각 PE 내부에 CPU Core, Contraction Engine, Vector Engine, Tensor DMA가 있으며, PE를 최대 4개까지 묶어 하나의 큰 연산 단위로 동작시킬 수 있습니다.
+8개의 PE(Processing Element)로 구성됩니다. 각 PE 내부에 CPU Core, Contraction Engine, Vector Engine, Tensor DMA가 있으며, PE를 최대 4개까지 묶어 하나의 큰 연산 단위로 동작시킬 수 있습니다[5].
 
 | ATOM 블록 | FuriosaAI RNGD 대응 요소 |
 |---|---|
@@ -159,7 +165,8 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 | Task Manager | CPU Core |
 
 ![FuriosaAI RNGD 아키텍처](../assets/02-npu-hw-architecture-basic/furiosaai-rngd-architecture.png)
-*[Figure 5. Overall architecture of RNGD and the internal components of the Processing Element (PE)] from Hot Chips 2024*
+
+*그림 2-9. RNGD 전체 아키텍처 및 PE 내부 구성. 출처: [5] Figure 5*
 
 ## 정리
 
@@ -170,9 +177,9 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 
 ## 참고
 
-- [Qualcomm Cloud AI 100 Architecture](https://quic.github.io/cloud-ai-sdk-pages/1.11/Getting-Started/Architecture/)
-- [Rebellions Whitepaper](https://rebellions.ai/wp-content/uploads/2026/03/Rebellions_Whitepaper_EN_v.01.pdf)
-- [NVIDIA H100 Tensor Core GPU Architecture Whitepaper](https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c)
-- [Tensor Contraction Processor (FuriosaAI RNGD, IEEE Micro 2025)](https://web.ist.utl.pt/nuno.lopes/pubs/tcp-micro25.pdf)
-- [Apache TVM: VTA Hardware Design Overview](https://tvm.apache.org/2018/07/12/vta-release-announcement.html)
+1. Rebellions, [ATOM™ Whitepaper](https://rebellions.ai/wp-content/uploads/2026/03/Rebellions_Whitepaper_EN_v.01.pdf), v0.1, 2023.
+2. Ong Soon Ee, Generic NPU Compute Core Dataflow, 2024.
+3. NVIDIA, [NVIDIA H100 Tensor Core GPU Architecture](https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c), Whitepaper, 2022.
+4. Qualcomm, [Qualcomm Cloud AI 100 Architecture](https://quic.github.io/cloud-ai-sdk-pages/1.11/Getting-Started/Architecture/), v1.11, 2024.
+5. FuriosaAI, [Tensor Contraction Processor](https://web.ist.utl.pt/nuno.lopes/pubs/tcp-micro25.pdf), IEEE Micro, 2025.
 

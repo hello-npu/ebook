@@ -8,14 +8,15 @@ AI 추론 전용 프로세서(NPU, Neural Processing Unit)의 코어는 크게 �
 
 Rebellions ATOM Neural Engine을 기준으로 각 블록의 역할을 설명합니다.
 
-![ATOM Neural Engine](../assets/02-npu-hw-architecture-basic/atom-neural-engine.png)  
+![ATOM Neural Engine](../assets/02-npu-hw-architecture-basic/atom-neural-engine.png)
 *[Figure 2. ATOM™ Neural Engine] from Rebellions Whitepaper*
 
 ### Tensor Processor
 
 행렬 곱셈(GEMM)과 행렬 덧셈을 처리하는 핵심 연산기입니다. PyTorch 기준으로 `torch.matmul`, `nn.Linear`, `nn.Conv2d` 등이 이 유닛에서 실행됩니다. AI 추론 워크로드에서 전체 연산량의 대부분을 차지하기 때문에, NPU 설계에서 가장 많은 실리콘 면적과 전력 예산이 이 유닛에 할당됩니다.
 
-구현 방식은 벤더에 따라 갈립니다. Google TPU의 MXU는 128x128 고정 크기의 Systolic Array를 사용하고, NVIDIA GPU의 Tensor Core는 소형(예: 16x8x32) 행렬 연산 유닛을 SM마다 여러 개 배치합니다.  
+구현 방식은 벤더에 따라 갈립니다. Google TPU의 MXU는 128x128 고정 크기의 Systolic Array를 사용하고, NVIDIA GPU의 Tensor Core는 소형(예: 16x8x32) 행렬 연산 유닛을 SM마다 여러 개 배치합니다.
+
 Qualcomm Cloud AI 100의 AI Core는 클럭당 8,192(INT8) 또는 4,096(FP16) MAC 연산을 처리합니다.
 
 ### Vector Processor
@@ -32,7 +33,8 @@ Tensor Processor가 Dense GEMM에 특화된 고정적 구조라면, Vector Proce
 
 일반적으로 Off-chip 메모리의 bandwidth는 연산기의 처리 속도에 비해 훨씬 느립니다. 이 격차를 줄이기 위해 코어 내부에 Scratch Pad Memory를 두고, 데이터를 한 번 가져오면 최대한 재사용(data reuse)한 뒤에 내보냅니다. 타 벤더에서는 SRAM(Static Random Access Memory) 또는 Local SRAM이라고 부르기도 합니다.
 
-예를 들어 거대한 행렬 곱셈을 한 번에 처리할 수 없으므로, 행렬을 타일(tile) 단위로 쪼개어 Scratch Pad Memory에 올리고 연산한 뒤, 다음 타일을 가져오는 방식으로 진행합니다.  
+예를 들어 거대한 행렬 곱셈을 한 번에 처리할 수 없으므로, 행렬을 타일(tile) 단위로 쪼개어 Scratch Pad Memory에 올리고 연산한 뒤, 다음 타일을 가져오는 방식으로 진행합니다.
+
 이 과정에서 Off-chip memory access 횟수를 줄이는 것이 NPU 성능 최적화의 핵심입니다. Tiling 전략과 Scratch Pad Memory 크기 사이의 균형이 컴파일러 최적화에서 가장 까다로운 문제 중 하나이기도 합니다.
 
 > **SRAM과 DRAM(LPDDR/GDDR/HBM 등) 비교**
@@ -40,7 +42,8 @@ Tensor Processor가 Dense GEMM에 특화된 고정적 구조라면, Vector Proce
 > - **SRAM (Static RAM)**: NPU 칩 내부에 위치하며, 연산 유닛이 자주 사용하는 데이터를 저장합니다.
 > - **DRAM (Dynamic RAM)**: NPU 칩 외부에 위치하며, 모델의 전체 Weight나 대규모 Activation 등 많은 양의 데이터를 저장합니다.
 >
-> SRAM은 DRAM보다 용량은 작지만 훨씬 짧은 지연시간과 높은 대역폭을 제공합니다.  
+> SRAM은 DRAM보다 용량은 작지만 훨씬 짧은 지연시간과 높은 대역폭을 제공합니다.
+>
 > 반대로 DRAM은 상대적으로 느리지만 훨씬 큰 용량을 제공하므로 대규모 모델을 저장할 수 있습니다.
 >
 > 예를 들어 Rebellions ATOM은 다음과 같은 메모리 계층을 사용합니다.
@@ -63,31 +66,32 @@ Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 �
 
 각 타일의 연산은 해당 타일의 전송이 완료된 뒤 시작해야 합니다. 또한 연산 중인 데이터를 덮어쓰지 않도록 버퍼 공간을 구분해야 합니다. 예를 들어 더블 버퍼링(double buffering)은 두 버퍼를 번갈아 사용하여, 한 버퍼의 데이터를 연산하는 동안 다른 버퍼에 다음 타일을 적재하는 방법입니다.
 
-![타일별 DMA 전송과 Tensor Processor 연산의 파이프라인 적용 전후 비교](../assets/02-npu-hw-architecture-basic/dma-compute-pipeline.png)  
+![타일별 DMA 전송과 Tensor Processor 연산의 파이프라인 적용 전후 비교](../assets/02-npu-hw-architecture-basic/dma-compute-pipeline.png)
 *자체 제작한 DMA 전송·연산 파이프라인 비교 개념도. 각 타일은 전송 완료 후 연산하며, 서로 다른 타일의 전송과 연산을 겹칩니다.*
 
 그림은 각 타일의 전송 시간과 연산 시간이 같은 단순화한 예시입니다. 실제 겹침의 범위와 성능 향상은 전송 대역폭, 연산 시간, 버퍼 자원에 따라 달라집니다.
 
 ### Task Manager
 
-컴파일러가 미리 생성해 둔 Instruction 시퀀스를 읽어 각 연산기(Tensor Processor, Vector Processor, DMA Engine)에 명령을 디스패치합니다. 타 벤더에서는 일반적으로 Control Unit이라고 부르는 블록입니다.  
-일반적으로 NPU는 GPU와 달리 런타임에 동적으로 스케줄링하는 것이 아니라, 컴파일러가 정적으로 결정한 실행 순서를 하드웨어가 그대로 따르는 구조가 많습니다.  
+컴파일러가 미리 생성해 둔 Instruction 시퀀스를 읽어 각 연산기(Tensor Processor, Vector Processor, DMA Engine)에 명령을 디스패치합니다. 타 벤더에서는 일반적으로 Control Unit이라고 부르는 블록입니다.
+
+일반적으로 NPU는 GPU와 달리 런타임에 동적으로 스케줄링하는 것이 아니라, 컴파일러가 정적으로 결정한 실행 순서를 하드웨어가 그대로 따르는 구조가 많습니다.
+
 이 덕분에 제어 로직이 단순해지고, 제어 로직이 단순해진 만큼 연산 유닛에 트랜지스터를 더 할당할 수 있습니다.
 
+이 다섯 가지 블록(Tensor Processor, Vector Processor, Scratch Pad Memory, DMA Engine, Task Manager)이 모여 하나의 NPU 코어를 구성합니다.
 
-이 다섯 가지 블록(Tensor Processor, Vector Processor, Scratch Pad Memory, DMA Engine, Task Manager)이 모여 하나의 NPU 코어를 구성합니다.  
 벤더 명칭을 걷어내고 데이터 흐름만 그리면 아래와 같은 형태가 됩니다. MAC Array가 Tensor Processor, Shared On-Chip Buffer가 Scratch Pad Memory, NPU Controller/Scheduler가 Task Manager에 해당하고, Off-Chip DRAM과 버퍼 사이를 DMA Engine이 오갑니다.
 
-![NPU 코어의 일반적인 데이터 흐름](../assets/02-npu-hw-architecture-basic/generic-npu-core-dataflow.jpeg)  
+![NPU 코어의 일반적인 데이터 흐름](../assets/02-npu-hw-architecture-basic/generic-npu-core-dataflow.jpeg)
 *[Generic NPU Compute Core Dataflow] by Ong Soon Ee*
 
 다음 절에서는 이 코어를 N개 배열하고 NoC로 연결한 SoC 구조를 살펴봅니다.
 
----
-
 ## 2. 멀티 코어로의 확장: NPU SoC 아키텍처
 
-실제 제품에서는 위에서 설명한 코어 하나만으로 칩이 구성되지 않습니다. 대부분의 벤더가 기본 코어를 N개 배열하고, 코어 간을 NoC(Network-on-Chip)로 연결하여 하나의 SoC를 구성합니다.  
+실제 제품에서는 위에서 설명한 코어 하나만으로 칩이 구성되지 않습니다. 대부분의 벤더가 기본 코어를 N개 배열하고, 코어 간을 NoC(Network-on-Chip)로 연결하여 하나의 SoC를 구성합니다.
+
 하나의 모델이나 연산을 여러 코어에 분할(partitioning)하여 병렬로 처리할 수 있고, 반대로 코어별로 서로 다른 모델을 독립적으로 실행할 수도 있습니다.
 
 ### 대표 예시: Rebellions ATOM SoC
@@ -101,7 +105,7 @@ Rebellions의 ATOM은 Samsung 5nm EUV 공정으로 제조된 AI 추론 전용 So
   - 16GB GDDR6 Off-chip DRAM (256 GB/s bandwidth)
 - **호스트 인터페이스**: PCIe Gen5 x16
 
-![ATOM SoC 아키텍처](../assets/02-npu-hw-architecture-basic/atom-soc-architecture.png)  
+![ATOM SoC 아키텍처](../assets/02-npu-hw-architecture-basic/atom-soc-architecture.png)
 *[Figure 1. ATOM™ Multi-layered SoC Architecture] from Rebellions Whitepaper*
 
 SoC나 HW 등에 익숙하지 않으면 생소할 수 있지만, 대부분의 AI 가속기가 이러한 계층 구조를 따릅니다.
@@ -118,12 +122,11 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 | DMA Engine | TMA (Tensor Memory Accelerator) |
 | Task Manager | Warp Scheduler |
 
-![GH100 SM 아키텍처](../assets/02-npu-hw-architecture-basic/gh100-sm-architecture.png)  
+![GH100 SM 아키텍처](../assets/02-npu-hw-architecture-basic/gh100-sm-architecture.png)
 *[Figure 7. GH100 Streaming Multiprocessor (SM)] from NVIDIA Whitepaper*
 
-![GH100 Full GPU](../assets/02-npu-hw-architecture-basic/gh100-full-gpu.png)  
+![GH100 Full GPU](../assets/02-npu-hw-architecture-basic/gh100-full-gpu.png)
 *[Figure 6. GH100 Full GPU with 144 SMs] from NVIDIA Whitepaper*
-
 
 ### 추가 예시 2: Qualcomm Cloud AI 100
 
@@ -137,10 +140,10 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 | DMA Engine | DMA Engine |
 | Task Manager | Scalar Processor |
 
-![Qualcomm AI Core](../assets/02-npu-hw-architecture-basic/qualcomm-ai-core.png)  
+![Qualcomm AI Core](../assets/02-npu-hw-architecture-basic/qualcomm-ai-core.png)
 *[Qualcomm AI Core] from Qualcomm Architecture*
 
-![Qualcomm Cloud AI 100 SoC](../assets/02-npu-hw-architecture-basic/qualcomm-cloud-ai100-soc.png)  
+![Qualcomm Cloud AI 100 SoC](../assets/02-npu-hw-architecture-basic/qualcomm-cloud-ai100-soc.png)
 *[Qualcomm Cloud AI 100 SoC] from Qualcomm Architecture*
 
 ### 추가 예시 3: FuriosaAI RNGD
@@ -155,7 +158,7 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 | DMA Engine | Tensor DMA |
 | Task Manager | CPU Core |
 
-![FuriosaAI RNGD 아키텍처](../assets/02-npu-hw-architecture-basic/furiosaai-rngd-architecture.png)  
+![FuriosaAI RNGD 아키텍처](../assets/02-npu-hw-architecture-basic/furiosaai-rngd-architecture.png)
 *[Figure 5. Overall architecture of RNGD and the internal components of the Processing Element (PE)] from Hot Chips 2024*
 
 ### 정리
@@ -164,8 +167,6 @@ H100은 NPU가 아닌 GPU지만, "코어(SM) N개를 인터커넥트로 연결�
 
 1. **단일 코어 계층**: 연산 효율을 극대화하기 위해 **행렬 연산기(Tensor)**, **벡터 연산기(Vector)**, **로컬 버퍼(Scratch Pad Memory)**, **데이터 이동기(DMA)**, **명령 제어기(Task Manager)** 의 5대 블록을 기본 단위로 구성합니다.
 2. **SoC 계층**: 독립된 코어를 복수 개 배치하고 **NoC(Network-on-Chip)** 로 묶어 확장하며, 고대역폭 외부 메모리(HBM/GDDR/LPDDR)와 SRAM을 두어 메모리 병목을 완화합니다.
-
----
 
 ## 참고
 

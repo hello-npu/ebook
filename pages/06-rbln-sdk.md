@@ -35,8 +35,8 @@ env | grep -Ei 'rbln'
 
 출력:
 
-```bash
-VIRTUAL_ENV=/home/hellonpu/rbln-env
+```text
+VIRTUAL_ENV=/home/<user>/rbln-env
 VIRTUAL_ENV_PROMPT=(rbln-env)
 ```
 
@@ -50,7 +50,7 @@ pip list | grep -Ei 'rbln|rebel|torch'
 
 출력:
 
-```bash
+```text
 optimum-rbln                             0.10.1
 rebel-compiler                           0.10.1
 torch                                    2.9.0+cpu
@@ -70,7 +70,7 @@ ldconfig -p 2>/dev/null | grep -Ei 'rbln|rebel'
 
 출력:
 
-```bash
+```text
         librbln-thunk.so.3 (libc6,x86-64) => /lib/librbln-thunk.so.3
         librbln-thunk.so (libc6,x86-64) => /lib/librbln-thunk.so
         librbln-ml.so (libc6,x86-64) => /lib/librbln-ml.so
@@ -88,7 +88,7 @@ rbln-smi
 
 출력:
 
-```bash
+```text
 Fri Oct 2 14:19:45 2026
 +-------------------------------------------------------------------------------------------------+
 |                                Device Information KMD ver: 3.0.0                                |
@@ -138,9 +138,15 @@ c = a + b
 print(c)
 ```
 
-실행 결과:
+스크립트를 실행하면 NPU 장치(`rbln:0`)에서 텐서 연산이 완료됩니다.
 
 ```bash
+python3 test_add.py
+```
+
+출력 결과:
+
+```text
 tensor([5., 7., 9.], device='rbln:0', dtype=torch.float16)
 ```
 
@@ -179,9 +185,15 @@ for i in range(count):
         print(f"  Name: {name}")
 ```
 
-실행 결과:
+스크립트 실행 결과는 다음과 같습니다.
 
 ```bash
+python3 test_python_api.py
+```
+
+출력 결과:
+
+```text
 NPU count: 1
 NPU 0
   Available: True
@@ -215,10 +227,16 @@ compiled_model = rebel.compile_from_torch(
 compiled_model.save('resnet50.rbln')
 ```
 
-컴파일 결과:
+컴파일 스크립트를 실행합니다.
 
 ```bash
-Downloading: "https://download.pytorch.org/models/resnet50-11ad3fa6.pth" to /home/hellonpu/.cache/torch/hub/checkpoints/resnet50-11ad3fa6.pth
+python3 resnet50_compile.py
+```
+
+출력 결과:
+
+```text
+Downloading: "https://download.pytorch.org/models/resnet50-11ad3fa6.pth" to /home/<user>/.cache/torch/hub/checkpoints/resnet50-11ad3fa6.pth
 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 97.8M/97.8M [00:00<00:00, 186MB/s]
 2026-10-03 10:42:57,585 INFO [rebel-compiler] Export done. Elapsed time: 0:00:00
 2026-10-03 10:42:59,378 INFO [rebel-compiler] Exported model conversion done. Elapsed time: 0:00:00, Memory change: 2.57 MB
@@ -259,9 +277,15 @@ pred_class = weights.meta['categories'][idx]
 print('Top-1 Predicted Class:', pred_class)
 ```
 
-추론 결과:
+추론 스크립트를 실행합니다.
 
 ```bash
+python3 resnet50_infer.py
+```
+
+출력 결과:
+
+```text
 2026-10-03 10:46:44,347 INFO [rebel-compiler] Load model completed. Elasped time: 0:00:00
 Top-1 Predicted Class: tabby
 ```
@@ -321,7 +345,13 @@ print(f"Q: {prompt}")
 print(f"A: {generated_text}")
 ```
 
-실행 결과:
+스크립트를 실행합니다.
+
+```bash
+python3 llama_eager.py
+```
+
+출력 결과:
 
 ```text
 Q: What is the capital of Korea?
@@ -357,10 +387,15 @@ compiled_model = RBLNLlamaForCausalLM.from_pretrained(
 compiled_model.save_pretrained("rbln-Llama-3.2-1B-Instruct")
 ```
 
-컴파일 로그는 아래와 같고, Prefill과 Decode Stage 각각에 대해 컴파일을 하는 것으로 관찰됩니다.
+컴파일 스크립트를 실행합니다.
 
 ```bash
-(rbln-env) juwon@cloud-9li96L:~$ python3 vllm-compile.py
+python3 vllm_compile.py
+```
+
+출력 결과:
+
+```text
 2026-10-07 22:20:30,725 INFO [rebel-compiler] -- Target NPU: RBLN-CA22
 2026-10-07 22:20:30,725 INFO [rebel-compiler] -- Tensor parallel size: 1
 2026-10-07 22:20:32,139 INFO [rebel-compiler] Export done. Elapsed time: 0:00:01
@@ -389,12 +424,19 @@ Computation graph optimization  ████████████████
 2026-10-07 22:21:47,260 INFO [rebel-compiler] Compiled model serialized. Elasped time: 0:00:00
 ```
 
+컴파일 로그를 통해 프롬프트 처리(Prefill)와 토큰 생성(Decode) 단계에 맞춰 각각의 서빙용 아티팩트(`prefill.rbln`, `decoder_batch_4.rbln`)가 생성됨을 확인할 수 있습니다.
+
 ### 7.2 OpenAI 호환 서버 실행
 
-아래 명령어와 같이 컴파일한 모델 경로를 입력하여 실행하면 로그가 출력되며 서버가 실행됩니다.
+컴파일된 모델 디렉토리 경로를 지정하여 vLLM 서빙 프로세스를 시작합니다.
 
 ```bash
-(rbln-env) juwon@cloud-9li96L:~$ vllm serve ./rbln-Llama-3.2-1B-Instruct/
+vllm serve ./rbln-Llama-3.2-1B-Instruct/
+```
+
+서버 실행 로그:
+
+```text
 INFO 10-07 21:56:27 [__init__.py:43] Available plugins for group vllm.platform_plugins:
 INFO 10-07 21:56:27 [__init__.py:45] - rbln -> vllm_rbln:register
 INFO 10-07 21:56:27 [__init__.py:48] All plugins in this group will be loaded. Set `VLLM_PLUGINS` to control which plugins to load.
@@ -421,10 +463,15 @@ INFO 10-07 21:56:27 [__init__.py:217] Platform plugin rbln is activated
 
 ### 7.3 서버 동작 확인 및 요청 테스트
 
-실행 후에는 rbln-smi로 vLLM 프로세스가 NPU device에 할당된 것을 볼 수 있습니다.
+서버 구동 후 `rbln-smi`를 실행하여 NPU 장치에 vLLM 프로세스가 할당되었는지 확인합니다.
 
 ```bash
-juwon@cloud-9li96L:~$ rbln-smi
+rbln-smi
+```
+
+출력 결과:
+
+```text
 Wed Oct 7 22:09:34 2026
 +-------------------------------------------------------------------------------------------------+
 |                                Device Information KMD ver: 3.0.0                                |
@@ -444,23 +491,28 @@ Wed Oct 7 22:09:34 2026
 +-----+---------------------+--------------+-----------+----------+------+---------------+--------+
 ```
 
-또한, 아래 명령어로 서빙 중인 모델 정보도 확인하고 모델이 정상적으로 alive임을 확인할 수 있습니다.
+서빙 중인 모델 정보를 조회하여 서버 활성 상태를 점검합니다.
 
 ```bash
-juwon@cloud-9li96L:~$ curl http://localhost:8000/v1/models
+curl http://localhost:8000/v1/models
+```
+
+출력 결과:
+
+```text
 {"object":"list","data":[{"id":"./rbln-Llama-3.2-1B-Instruct/","object":"model","created":1791378156,"owned_by":"vllm","root":"./rbln-Llama-3.2-1B-Instruct/","parent":null,"max_model_len":8192,"permission":[{"id":"modelperm-8a43223c951b5551","object":"model_permission","created":1791378156,"allow_create_engine":false,"allow_sampling":true,"allow_logprobs":true,"allow_search_indices":false,"allow_view":true,"allow_fine_tuning":false,"orgcurl http://localhost:8000/health/readyg":false}]}]}
 ```
 
-마지막으로, 아래 명령어를 통해 LLM에게 질문을 하고 답변을 받아볼 수 있습니다.
+OpenAI 호환 규격의 `/v1/chat/completions` 엔드포인트로 질문을 전송하여 응답을 수신합니다.
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
--H "Content-Type: application/json" \
--d '{
+  -H "Content-Type: application/json" \
+  -d '{
     "model": "./rbln-Llama-3.2-1B-Instruct/",
     "messages": [
-    {"role": "user", "content": "Hello, how are you?"}
+      {"role": "user", "content": "Hello, how are you?"}
     ],
     "max_tokens": 100
-}'
+  }'
 ```

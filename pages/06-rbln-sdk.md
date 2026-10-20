@@ -516,6 +516,13 @@ curl http://localhost:8000/v1/chat/completions \
   }'
 ```
 
+## 정리
+
+- 리벨리온 RBLN SDK 환경에서 `rbln-smi` 및 Python 유틸리티 API로 NPU 장치(`RBLN-CA22`) 인식 상태와 사용 가능 여부를 점검했습니다.
+- PyTorch 텐서를 NPU 장치(`rbln`)에 직접 생성하여 기본 FP16 덧셈 연산을 실행했습니다.
+- TorchVision의 사전 학습된 ResNet50 모델을 컴파일하여 RBLN Runtime 기반으로 추론했습니다.
+- Llama-3.2-1B 언어 모델을 eager mode로 테스트한 뒤, `optimum-rbln`과 `vLLM`을 사용해 OpenAI 규격의 API 서빙 환경을 구축하고 호출을 검증했습니다.
+
 ## 참고
 
 1. Rebellions, [RBLN SDK v0.11.2 사용자 가이드](https://docs.rbln.ai/v0.11.2/ko/index.html), v0.11.2, 2026-10-20 확인.

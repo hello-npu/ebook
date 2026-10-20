@@ -1,10 +1,17 @@
 # 06. 리벨리온 NPU 사용 예제
 
-리벨리온(Rebellions)의 RBLN SDK가 미리 설치된 Python 가상환경에서 시작합니다. 가상환경을 활성화한 뒤 SDK 관련 패키지와 시스템 라이브러리, NPU 장치를 확인하고 간단한 텐서 연산 및 Python 유틸리티 API를 실행합니다.
+## 개요
 
-참고 문서:
+리벨리온(Rebellions) RBLN SDK 환경에서 NPU 장치 상태를 점검하고 기본 텐서 연산부터 ResNet50 컴파일, Llama-3.2 구동 및 vLLM 서빙까지 단계별로 실습합니다. 가상환경 활성화와 시스템 점검을 거쳐 실제 모델을 컴파일하고 OpenAI 규격의 API 서버를 배포하는 전 과정을 다룹니다. 이 장을 마치면 리벨리온 NPU 장치에서 모델을 최적화해 배포하고 엔드포인트를 호출할 수 있습니다 [1].
 
-- [RBLN SDK v0.11.2 사용자 가이드](https://docs.rbln.ai/v0.11.2/ko/index.html)
+| 항목 | 내용 / 버전 |
+|---|---|
+| 하드웨어 | Rebellions RBLN-CA22 (16GB) |
+| 커널 모듈 드라이버(KMD) | 3.0.0 |
+| SDK 및 컴파일러 | rebel-compiler 0.10.1, torch-rbln 0.1.7 |
+| 딥러닝 프레임워크 | torch 2.9.0+cpu, torchvision 0.24.0, optimum-rbln 0.10.1 |
+| 서빙 프레임워크 | vllm_rbln 0.10.1.post2 |
+| 실습 일자 | 2026-10-07 |
 
 ## 1. 가상환경 활성화
 
@@ -18,7 +25,7 @@ source ~/rbln-env/bin/activate
 
 ## 2. 서버의 SDK 및 장치 확인
 
-### 2-1. 환경변수 확인
+### 2.1 환경변수 확인
 
 `rbln` 문자열이 포함된 환경변수를 확인합니다.
 
@@ -28,14 +35,14 @@ env | grep -Ei 'rbln'
 
 출력:
 
-```bash
-VIRTUAL_ENV=/home/hellonpu/rbln-env
+```text
+VIRTUAL_ENV=/home/<user>/rbln-env
 VIRTUAL_ENV_PROMPT=(rbln-env)
 ```
 
 이 출력에서는 활성화된 가상환경의 경로와 프롬프트 설정을 확인할 수 있습니다. SDK 설치 여부는 아래 패키지와 라이브러리 확인을 통해 별도로 점검합니다.
 
-### 2-2. 설치된 관련 패키지 확인
+### 2.2 설치된 관련 패키지 확인
 
 ```bash
 pip list | grep -Ei 'rbln|rebel|torch'
@@ -43,7 +50,7 @@ pip list | grep -Ei 'rbln|rebel|torch'
 
 출력:
 
-```bash
+```text
 optimum-rbln                             0.10.1
 rebel-compiler                           0.10.1
 torch                                    2.9.0+cpu
@@ -53,7 +60,7 @@ torchvision                              0.24.0
 vllm_rbln                                0.10.1.post2
 ```
 
-### 2-3. 시스템 라이브러리 확인
+### 2.3 시스템 라이브러리 확인
 
 시스템의 공유 라이브러리 캐시에서 리벨리온 관련 라이브러리를 확인합니다.
 
@@ -63,7 +70,7 @@ ldconfig -p 2>/dev/null | grep -Ei 'rbln|rebel'
 
 출력:
 
-```bash
+```text
         librbln-thunk.so.3 (libc6,x86-64) => /lib/librbln-thunk.so.3
         librbln-thunk.so (libc6,x86-64) => /lib/librbln-thunk.so
         librbln-ml.so (libc6,x86-64) => /lib/librbln-ml.so
@@ -71,7 +78,7 @@ ldconfig -p 2>/dev/null | grep -Ei 'rbln|rebel'
         librbln-ccl.so (libc6,x86-64) => /lib/librbln-ccl.so
 ```
 
-### 2-4. NPU 장치 확인
+### 2.4 NPU 장치 확인
 
 NVIDIA GPU에서 `nvidia-smi`로 장치 상태를 확인하는 것과 유사하게, 리벨리온 NPU에서는 `rbln-smi`를 사용합니다.
 
@@ -81,7 +88,7 @@ rbln-smi
 
 출력:
 
-```bash
+```text
 Fri Oct 2 14:19:45 2026
 +-------------------------------------------------------------------------------------------------+
 |                                Device Information KMD ver: 3.0.0                                |
@@ -112,29 +119,34 @@ Fri Oct 2 14:19:45 2026
 | 메모리 사용량 / 전체 용량 | 0.0B / 15.7GiB |
 | 표시된 실행 컨텍스트 | 없음 |
 
-## 3. 간단한 텐서 연산 실행
+## 3. 기본 텐서 연산
 
-[공식 PyTorch RBLN 튜토리얼](https://docs.rbln.ai/latest/ko/software/rbln_pytorch/tutorial_running_n_debugging.html)의 `torch.add` 예제를 실행합니다.
+PyTorch RBLN 튜토리얼 [2]의 `torch.add` 예제를 실행합니다.
 
 `device="rbln"`을 지정해 NPU에 FP16 텐서를 생성하고, 두 텐서의 원소별 덧셈을 수행합니다. 코드의 `a + b`는 `torch.add`에 해당하는 연산입니다.
 
-### 코드: test_add.py
-
+`test_add.py`
 ```python
 import torch
 
 device = "rbln"
 
-a = torch.tensor(, dtype=torch.float16, device=device)
-b = torch.tensor(, dtype=torch.float16, device=device)
+a = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float16, device=device)
+b = torch.tensor([4.0, 5.0, 6.0], dtype=torch.float16, device=device)
 
 c = a + b
 print(c)
 ```
 
-### 실행 결과
+스크립트를 실행하면 NPU 장치(`rbln:0`)에서 텐서 연산이 완료됩니다.
 
 ```bash
+python3 test_add.py
+```
+
+출력 결과:
+
+```text
 tensor([5., 7., 9.], device='rbln:0', dtype=torch.float16)
 ```
 
@@ -153,8 +165,7 @@ NVIDIA GPU에서 사용하는 PyTorch CUDA API와 기능상 대응되는 API는 
 | 장치 개수 | `torch.cuda.device_count()` | `rebel.device_count()` |
 
 
-### 코드: test_python_api.py
-
+`test_python_api.py`
 ```python
 import rebel
 
@@ -174,9 +185,15 @@ for i in range(count):
         print(f"  Name: {name}")
 ```
 
-### 실행 결과
+스크립트 실행 결과는 다음과 같습니다.
 
 ```bash
+python3 test_python_api.py
+```
+
+출력 결과:
+
+```text
 NPU count: 1
 NPU 0
   Available: True
@@ -185,14 +202,15 @@ NPU 0
 
 이 환경에서는 NPU 1개가 확인되며, 인덱스 `0`의 장치 이름은 `RBLN-CA22`이고 사용 가능 여부는 `True`로 반환됩니다.
 
-## 5. ResNet50 컴파일(compile) 및 추론(inference)
+## 5. ResNet50 컴파일 및 추론
 
-[RBLN SDK ResNet50 튜토리얼](https://docs.rbln.ai/v0.11.2/ko/software/api/python/tutorial/basic/pytorch_resnet50.html)을 참조합니다.
+RBLN SDK의 비전 모델 튜토리얼 [3]에 따라 ResNet50 모델을 컴파일하고 추론을 수행합니다.
 
-### 컴파일
+### 5.1 모델 컴파일
 
 TorchVision에서 사전 학습된 ResNet50 모델을 불러와 추론 모드로 설정한 후, RBLN Python API로 컴파일합니다.
 
+`resnet50_compile.py`
 ```python
 import torch
 from torchvision.models import resnet50, ResNet50_Weights
@@ -209,10 +227,16 @@ compiled_model = rebel.compile_from_torch(
 compiled_model.save('resnet50.rbln')
 ```
 
-### 컴파일 결과
+컴파일 스크립트를 실행합니다.
 
 ```bash
-Downloading: "https://download.pytorch.org/models/resnet50-11ad3fa6.pth" to /home/hellonpu/.cache/torch/hub/checkpoints/resnet50-11ad3fa6.pth
+python3 resnet50_compile.py
+```
+
+출력 결과:
+
+```text
+Downloading: "https://download.pytorch.org/models/resnet50-11ad3fa6.pth" to /home/<user>/.cache/torch/hub/checkpoints/resnet50-11ad3fa6.pth
 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 97.8M/97.8M [00:00<00:00, 186MB/s]
 2026-10-03 10:42:57,585 INFO [rebel-compiler] Export done. Elapsed time: 0:00:00
 2026-10-03 10:42:59,378 INFO [rebel-compiler] Exported model conversion done. Elapsed time: 0:00:00, Memory change: 2.57 MB
@@ -228,9 +252,11 @@ Computation graph optimization  ████████████████
 2026-10-03 10:43:02,797 INFO [rebel-compiler] Compiled model serialized. Elasped time: 0:00:00
 ```
 
-### 모델 추론
+### 5.2 모델 추론
 
 예제 이미지를 다운로드하고 전처리한 후, RBLN Runtime으로 컴파일된 모델을 로드하여 추론을 실행하고 최상위 예측 클래스를 출력합니다.
+
+`resnet50_infer.py`
 
 ```python
 import urllib.request
@@ -251,19 +277,26 @@ pred_class = weights.meta['categories'][idx]
 print('Top-1 Predicted Class:', pred_class)
 ```
 
-### 모델 추론 결과
+추론 스크립트를 실행합니다.
 
 ```bash
+python3 resnet50_infer.py
+```
+
+출력 결과:
+
+```text
 2026-10-03 10:46:44,347 INFO [rebel-compiler] Load model completed. Elasped time: 0:00:00
 Top-1 Predicted Class: tabby
 ```
 
-## 6. Llama3.2-1B eager mode 실행
+## 6. Llama-3.2-1B eager mode 실행
 
-[RBLN SDK Llama 튜토리얼](https://docs.rbln.ai/v0.11.2/ko/software/rbln_pytorch/tutorial_llama.html)을 참조합니다.
+RBLN SDK의 언어 모델 튜토리얼 [4]을 바탕으로 Llama-3.2-1B 모델을 컴파일 없이 eager mode로 실행합니다.
 
-### 실행
 연산 장치 지정을 cuda 또는 cpu 대신 rbln으로 변경하는 부분을 제외하면, GPU 또는 CPU 환경에서 사용하는 코드와 동일한 구성입니다.
+
+`llama_eager.py`
 
 ```python
 import re
@@ -312,7 +345,13 @@ print(f"Q: {prompt}")
 print(f"A: {generated_text}")
 ```
 
-### 실행 결과
+스크립트를 실행합니다.
+
+```bash
+python3 llama_eager.py
+```
+
+출력 결과:
 
 ```text
 Q: What is the capital of Korea?
@@ -321,12 +360,13 @@ Seoul is the capital and largest city of South Korea. It is located in the south
 ```
 
 
-## 7. vLLM w/ OpenAI Compatible Server
+## 7. vLLM 기반 OpenAI 호환 API 서버 구동
 
-https://docs.rbln.ai/v0.10.1/ko/software/model_serving/vllm_support/tutorial/openai_api_server.html를 기반으로 하였습니다.  
-버전에 따라 argument 차이가 있으므로 주의해야 합니다.
+리벨리온의 vLLM 지원 가이드 [5]를 참조하여 Llama-3.2-1B 모델을 서빙용으로 컴파일하고 OpenAI 규격의 API 서버를 구동합니다. SDK 버전에 따라 세부 인자(argument)가 다를 수 있으므로 버전을 점검해야 합니다.
 
-### 모델 컴파일
+### 7.1 서빙 모델 컴파일
+
+`vllm_compile.py`
 
 ```python
 from optimum.rbln import RBLNLlamaForCausalLM
@@ -346,10 +386,15 @@ compiled_model = RBLNLlamaForCausalLM.from_pretrained(
 compiled_model.save_pretrained("rbln-Llama-3.2-1B-Instruct")
 ```
 
-컴파일 로그는 아래와 같고, Prefill과 Decode Stage 각각에 대해 컴파일을 하는 것으로 관찰됩니다.
+컴파일 스크립트를 실행합니다.
 
 ```bash
-(rbln-env) juwon@cloud-9li96L:~$ python3 vllm-compile.py
+python3 vllm_compile.py
+```
+
+출력 결과:
+
+```text
 2026-10-07 22:20:30,725 INFO [rebel-compiler] -- Target NPU: RBLN-CA22
 2026-10-07 22:20:30,725 INFO [rebel-compiler] -- Tensor parallel size: 1
 2026-10-07 22:20:32,139 INFO [rebel-compiler] Export done. Elapsed time: 0:00:01
@@ -378,12 +423,19 @@ Computation graph optimization  ████████████████
 2026-10-07 22:21:47,260 INFO [rebel-compiler] Compiled model serialized. Elasped time: 0:00:00
 ```
 
-### OpenAI API Server 실행
+컴파일 로그를 통해 프롬프트 처리(Prefill)와 토큰 생성(Decode) 단계에 맞춰 각각의 서빙용 아티팩트(`prefill.rbln`, `decoder_batch_4.rbln`)가 생성됨을 확인할 수 있습니다.
 
-아래 명령어와 같이 컴파일한 모델 경로를 입력하여 실행하면 로그가 출력되며 서버가 실행됩니다.
+### 7.2 OpenAI 호환 서버 실행
+
+컴파일된 모델 디렉토리 경로를 지정하여 vLLM 서빙 프로세스를 시작합니다.
 
 ```bash
-(rbln-env) juwon@cloud-9li96L:~$ vllm serve ./rbln-Llama-3.2-1B-Instruct/
+vllm serve ./rbln-Llama-3.2-1B-Instruct/
+```
+
+서버 실행 로그:
+
+```text
 INFO 10-07 21:56:27 [__init__.py:43] Available plugins for group vllm.platform_plugins:
 INFO 10-07 21:56:27 [__init__.py:45] - rbln -> vllm_rbln:register
 INFO 10-07 21:56:27 [__init__.py:48] All plugins in this group will be loaded. Set `VLLM_PLUGINS` to control which plugins to load.
@@ -408,10 +460,17 @@ INFO 10-07 21:56:27 [__init__.py:217] Platform plugin rbln is activated
 (APIServer pid=14521) INFO:     127.0.0.1:54804 - "GET /health/ready HTTP/1.1" 404 Not Found
 ```
 
-실행 후에는 rbln-smi로 vLLM 프로세스가 NPU device에 할당된 것을 볼 수 있습니다.
+### 7.3 서버 동작 확인 및 요청 테스트
+
+서버 구동 후 `rbln-smi`를 실행하여 NPU 장치에 vLLM 프로세스가 할당되었는지 확인합니다.
 
 ```bash
-juwon@cloud-9li96L:~$ rbln-smi
+rbln-smi
+```
+
+출력 결과:
+
+```text
 Wed Oct 7 22:09:34 2026
 +-------------------------------------------------------------------------------------------------+
 |                                Device Information KMD ver: 3.0.0                                |
@@ -431,23 +490,43 @@ Wed Oct 7 22:09:34 2026
 +-----+---------------------+--------------+-----------+----------+------+---------------+--------+
 ```
 
-또한, 아래 명령어로 서빙 중인 모델 정보도 확인하고 모델이 정상적으로 alive임을 확인할 수 있습니다.
+서빙 중인 모델 정보를 조회하여 서버 활성 상태를 점검합니다.
 
 ```bash
-juwon@cloud-9li96L:~$ curl http://localhost:8000/v1/models
+curl http://localhost:8000/v1/models
+```
+
+출력 결과:
+
+```text
 {"object":"list","data":[{"id":"./rbln-Llama-3.2-1B-Instruct/","object":"model","created":1791378156,"owned_by":"vllm","root":"./rbln-Llama-3.2-1B-Instruct/","parent":null,"max_model_len":8192,"permission":[{"id":"modelperm-8a43223c951b5551","object":"model_permission","created":1791378156,"allow_create_engine":false,"allow_sampling":true,"allow_logprobs":true,"allow_search_indices":false,"allow_view":true,"allow_fine_tuning":false,"orgcurl http://localhost:8000/health/readyg":false}]}]}
 ```
 
-마지막으로, 아래 명령어를 통해 LLM에게 질문을 하고 답변을 받아볼 수 있습니다.
+OpenAI 호환 규격의 `/v1/chat/completions` 엔드포인트로 질문을 전송하여 응답을 수신합니다.
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
--H "Content-Type: application/json" \
--d '{
+  -H "Content-Type: application/json" \
+  -d '{
     "model": "./rbln-Llama-3.2-1B-Instruct/",
     "messages": [
-    {"role": "user", "content": "Hello, how are you?"}
+      {"role": "user", "content": "Hello, how are you?"}
     ],
     "max_tokens": 100
-}'
+  }'
 ```
+
+## 정리
+
+- 리벨리온 RBLN SDK 환경에서 `rbln-smi` 및 Python 유틸리티 API로 NPU 장치(`RBLN-CA22`) 인식 상태와 사용 가능 여부를 점검했습니다.
+- PyTorch 텐서를 NPU 장치(`rbln`)에 직접 생성하여 기본 FP16 덧셈 연산을 실행했습니다.
+- TorchVision의 사전 학습된 ResNet50 모델을 컴파일하여 RBLN Runtime 기반으로 추론했습니다.
+- Llama-3.2-1B 언어 모델을 eager mode로 테스트한 뒤, `optimum-rbln`과 `vLLM`을 사용해 OpenAI 규격의 API 서빙 환경을 구축하고 호출을 검증했습니다.
+
+## 참고
+
+1. Rebellions, [RBLN SDK v0.11.2 사용자 가이드](https://docs.rbln.ai/v0.11.2/ko/index.html), v0.11.2, 2026-10-20 확인.
+2. Rebellions, [PyTorch RBLN 튜토리얼: Running & Debugging](https://docs.rbln.ai/latest/ko/software/rbln_pytorch/tutorial_running_n_debugging.html), 2026-10-20 확인.
+3. Rebellions, [RBLN SDK ResNet50 튜토리얼](https://docs.rbln.ai/v0.11.2/ko/software/api/python/tutorial/basic/pytorch_resnet50.html), v0.11.2, 2026-10-20 확인.
+4. Rebellions, [RBLN SDK Llama 튜토리얼](https://docs.rbln.ai/v0.11.2/ko/software/rbln_pytorch/tutorial_llama.html), v0.11.2, 2026-10-20 확인.
+5. Rebellions, [vLLM Support: OpenAI API Server 튜토리얼](https://docs.rbln.ai/v0.10.1/ko/software/model_serving/vllm_support/tutorial/openai_api_server.html), v0.10.1, 2026-10-20 확인.

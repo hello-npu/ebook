@@ -121,7 +121,7 @@ Fri Oct 2 14:19:45 2026
 
 ## 3. 기본 텐서 연산
 
-[공식 PyTorch RBLN 튜토리얼](https://docs.rbln.ai/latest/ko/software/rbln_pytorch/tutorial_running_n_debugging.html)의 `torch.add` 예제를 실행합니다.
+PyTorch RBLN 튜토리얼 [2]의 `torch.add` 예제를 실행합니다.
 
 `device="rbln"`을 지정해 NPU에 FP16 텐서를 생성하고, 두 텐서의 원소별 덧셈을 수행합니다. 코드의 `a + b`는 `torch.add`에 해당하는 연산입니다.
 
@@ -204,7 +204,7 @@ NPU 0
 
 ## 5. ResNet50 컴파일 및 추론
 
-[RBLN SDK ResNet50 튜토리얼](https://docs.rbln.ai/v0.11.2/ko/software/api/python/tutorial/basic/pytorch_resnet50.html)을 참조합니다.
+RBLN SDK의 비전 모델 튜토리얼 [3]에 따라 ResNet50 모델을 컴파일하고 추론을 수행합니다.
 
 ### 5.1 모델 컴파일
 
@@ -292,7 +292,7 @@ Top-1 Predicted Class: tabby
 
 ## 6. Llama-3.2-1B eager mode 실행
 
-[RBLN SDK Llama 튜토리얼](https://docs.rbln.ai/v0.11.2/ko/software/rbln_pytorch/tutorial_llama.html)을 참조합니다.
+RBLN SDK의 언어 모델 튜토리얼 [4]을 바탕으로 Llama-3.2-1B 모델을 컴파일 없이 eager mode로 실행합니다.
 
 연산 장치 지정을 cuda 또는 cpu 대신 rbln으로 변경하는 부분을 제외하면, GPU 또는 CPU 환경에서 사용하는 코드와 동일한 구성입니다.
 
@@ -362,8 +362,7 @@ Seoul is the capital and largest city of South Korea. It is located in the south
 
 ## 7. vLLM 기반 OpenAI 호환 API 서버 구동
 
-https://docs.rbln.ai/v0.10.1/ko/software/model_serving/vllm_support/tutorial/openai_api_server.html를 기반으로 하였습니다.  
-버전에 따라 argument 차이가 있으므로 주의해야 합니다.
+리벨리온의 vLLM 지원 가이드 [5]를 참조하여 Llama-3.2-1B 모델을 서빙용으로 컴파일하고 OpenAI 규격의 API 서버를 구동합니다. SDK 버전에 따라 세부 인자(argument)가 다를 수 있으므로 버전을 점검해야 합니다.
 
 ### 7.1 서빙 모델 컴파일
 
@@ -516,3 +515,11 @@ curl http://localhost:8000/v1/chat/completions \
     "max_tokens": 100
   }'
 ```
+
+## 참고
+
+1. Rebellions, [RBLN SDK v0.11.2 사용자 가이드](https://docs.rbln.ai/v0.11.2/ko/index.html), v0.11.2, 2026-10-20 확인.
+2. Rebellions, [PyTorch RBLN 튜토리얼: Running & Debugging](https://docs.rbln.ai/latest/ko/software/rbln_pytorch/tutorial_running_n_debugging.html), 2026-10-20 확인.
+3. Rebellions, [RBLN SDK ResNet50 튜토리얼](https://docs.rbln.ai/v0.11.2/ko/software/api/python/tutorial/basic/pytorch_resnet50.html), v0.11.2, 2026-10-20 확인.
+4. Rebellions, [RBLN SDK Llama 튜토리얼](https://docs.rbln.ai/v0.11.2/ko/software/rbln_pytorch/tutorial_llama.html), v0.11.2, 2026-10-20 확인.
+5. Rebellions, [vLLM Support: OpenAI API Server 튜토리얼](https://docs.rbln.ai/v0.10.1/ko/software/model_serving/vllm_support/tutorial/openai_api_server.html), v0.10.1, 2026-10-20 확인.

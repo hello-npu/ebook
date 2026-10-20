@@ -1,10 +1,17 @@
 # 06. 리벨리온 NPU 사용 예제
 
-리벨리온(Rebellions)의 RBLN SDK가 미리 설치된 Python 가상환경에서 시작합니다. 가상환경을 활성화한 뒤 SDK 관련 패키지와 시스템 라이브러리, NPU 장치를 확인하고 간단한 텐서 연산 및 Python 유틸리티 API를 실행합니다.
+## 개요
 
-참고 문서:
+리벨리온(Rebellions) RBLN SDK 환경에서 NPU 장치 상태를 점검하고 기본 텐서 연산부터 ResNet50 컴파일, Llama-3.2 구동 및 vLLM 서빙까지 단계별로 실습합니다. 가상환경 활성화와 시스템 점검을 거쳐 실제 모델을 컴파일하고 OpenAI 규격의 API 서버를 배포하는 전 과정을 다룹니다. 이 장을 마치면 리벨리온 NPU 장치에서 모델을 최적화해 배포하고 엔드포인트를 호출할 수 있습니다 [1].
 
-- [RBLN SDK v0.11.2 사용자 가이드](https://docs.rbln.ai/v0.11.2/ko/index.html)
+| 항목 | 내용 / 버전 |
+|---|---|
+| 하드웨어 | Rebellions RBLN-CA22 (16GB) |
+| 커널 모듈 드라이버(KMD) | 3.0.0 |
+| SDK 및 컴파일러 | rebel-compiler 0.10.1, torch-rbln 0.1.7 |
+| 딥러닝 프레임워크 | torch 2.9.0+cpu, torchvision 0.24.0, optimum-rbln 0.10.1 |
+| 서빙 프레임워크 | vllm_rbln 0.10.1.post2 |
+| 실습 일자 | 2026-10-07 |
 
 ## 1. 가상환경 활성화
 

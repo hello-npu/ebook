@@ -20,14 +20,14 @@
 
 | 항목 | 내용 |
 |---|---|
-| 장치 | Rebellions RBLN-CA22 1장(16GB), 여러 사람이 공유 |
+| 장치 | Rebellions RBLN-CA22(ATOM) 1장(16GB), 여러 사람이 공유 |
 | 드라이버·펌웨어 | KMD 3.0.0, 펌웨어 3.0.0 |
 | SDK | rebel-compiler 0.10.1, optimum-rbln 0.10.1 |
 | 파이썬 패키지 | torch 2.9.0+cpu, transformers 4.57.6 (업그레이드하지 않음) |
 | 호스트 | AMD EPYC 9254, 6 vCPU, RAM 70GB, Ubuntu 24.04 (가상 환경) |
 | 측정일 | gemma-2b 2026-11-01, BERT 계열 2026-11-02 |
 
-비교 대상 CPU는 같은 호스트의 PyTorch(fp32, bf16)입니다. CPU는 6 vCPU의 공유 가상 서버이므로 더 큰 CPU나 GPU와의 비교로 일반화할 수 없습니다.
+비교 대상 CPU는 같은 호스트의 PyTorch(fp32, bf16)입니다. CPU는 6 vCPU의 공유 가상 서버이므로 더 큰 CPU나 GPU와의 비교로 일반화할 수 없습니다. GPU(RTX A5000)와의 직접 비교는 [10. 벤치마크 모음](10-benchmarks.md)의 5절(gemma-2b)과 6절(BERT 계열)에서 다룹니다.
 
 ### 2.2 BERT 계열 구동
 

@@ -6,7 +6,7 @@
 * [04. 모델 컴파일과 최적화](pages/04-compile-optimize.md)
 * [05. 비전·NLP 모델 구동기](pages/05-vision-nlp.md)
 * [06. 리벨리온 NPU 사용 예제](pages/06-rbln-sdk.md)
-* [07. vLLM 이해하기](pages/07-vllm-basics.md)
+* [07. LLM과 vLLM 이해하기](pages/07-vllm-basics.md)
 * [08. NPU에 LLM 서빙하기](pages/08-llm-serving.md)
 * [09. vLLM 서빙 문제점과 개선기](pages/09-serving-improve.md)
 * [10. 벤치마크 모음](pages/10-benchmarks.md)

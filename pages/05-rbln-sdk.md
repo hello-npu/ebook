@@ -11,7 +11,7 @@
 | SDK 및 컴파일러 | rebel-compiler 0.10.1, torch-rbln 0.1.7 |
 | 딥러닝 프레임워크 | torch 2.9.0+cpu, torchvision 0.24.0, optimum-rbln 0.10.1 |
 | 서빙 프레임워크 | vllm_rbln 0.10.1.post2 |
-| 실습 일자 | 2026-10-07 |
+| 실습 일자 | 2026-10-02 ~ 2026-10-07 |
 
 ## 1. 가상환경 활성화
 
@@ -164,7 +164,6 @@ NVIDIA GPU에서 사용하는 PyTorch CUDA API와 기능상 대응되는 API는 
 | 장치 이름 | `torch.cuda.get_device_name(i)` | `rebel.get_npu_name(i)` |
 | 장치 개수 | `torch.cuda.device_count()` | `rebel.device_count()` |
 
-
 `test_python_api.py`
 ```python
 import rebel
@@ -260,7 +259,10 @@ Computation graph optimization  ████████████████
 
 ```python
 import urllib.request
+
+import torch
 from torchvision.io.image import read_image
+from torchvision.models import ResNet50_Weights
 from rebel import Runtime
 
 weights = ResNet50_Weights.DEFAULT
@@ -358,7 +360,6 @@ Q: What is the capital of Korea?
 A: Seoul
 Seoul is the capital and largest city of South Korea. It is located in the southeastern part of the country and is known for its vibrant culture, rich history, and modern architecture. Seoul is home to many famous landmarks, including the Gyeongbokgung Palace, the Bukchon Hanok
 ```
-
 
 ## 7. vLLM 기반 OpenAI 호환 API 서버 구동
 
@@ -502,6 +503,8 @@ curl http://localhost:8000/v1/models
 {"object":"list","data":[{"id":"./rbln-Llama-3.2-1B-Instruct/","object":"model","created":1791378156,"owned_by":"vllm","root":"./rbln-Llama-3.2-1B-Instruct/","parent":null,"max_model_len":8192,"permission":[{"id":"modelperm-8a43223c951b5551","object":"model_permission","created":1791378156,"allow_create_engine":false,"allow_sampling":true,"allow_logprobs":true,"allow_search_indices":false,"allow_view":true,"allow_fine_tuning":false,"orgcurl http://localhost:8000/health/readyg":false}]}]}
 ```
 
+> 📝 확인 필요: 위 출력의 끝부분(`"orgcurl http://localhost:8000/health/readyg"`)은 출력을 복사하는 중에 다음 명령이 섞인 것으로 보입니다. 원래 출력으로 다시 받아 바꿔야 합니다.
+
 OpenAI 호환 규격의 `/v1/chat/completions` 엔드포인트로 질문을 전송하여 응답을 수신합니다.
 
 ```bash
@@ -515,6 +518,8 @@ curl http://localhost:8000/v1/chat/completions \
     "max_tokens": 100
   }'
 ```
+
+> 📝 실습 채움: 이 요청의 응답 출력. 서버 로그에는 `POST /v1/chat/completions` 200 OK가 남아 있지만 응답 본문을 기록하지 않았습니다.
 
 ## 정리
 

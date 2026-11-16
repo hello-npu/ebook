@@ -2,7 +2,7 @@
 
 ## 개요
 
-[2장](02-npu-hw-architecture-basic.md)에서는 NPU 코어를 구성하는 다섯 블록(Tensor Processor, Vector Processor, DMA Engine, Task Manager, Scratch Pad Memory)을 살펴봤습니다 [1]. 이 장에서는 그 하드웨어를 소프트웨어(컴파일러와 런타임)가 어떻게 활용해야 연산기 Utilization을 최대화할 수 있는지 다룹니다. 행렬 곱을 담당하는 Tensor Processor는 이 장에서 역할을 강조해 Matrix Processor로 부르며, 2장의 Scratch Pad Memory는 On-chip SRAM과 같은 의미로 씁니다.
+[02. NPU HW Architecture: AI 추론을 위한 전용 하드웨어](02-npu-hw-architecture-basic.md)에서는 NPU 코어를 구성하는 다섯 블록(Tensor Processor, Vector Processor, DMA Engine, Task Manager, Scratch Pad Memory)을 살펴봤습니다 [1]. 이 장에서는 그 하드웨어를 소프트웨어(컴파일러와 런타임)가 어떻게 활용해야 연산기 Utilization을 최대화할 수 있는지 다룹니다. 행렬 곱을 담당하는 Tensor Processor는 이 장에서 역할을 강조해 Matrix Processor로 부르며, 2장의 Scratch Pad Memory는 On-chip SRAM과 같은 의미로 씁니다.
 
 스펙 시트의 Peak TOPS는 "모든 연산기가 매 사이클 유효 연산을 수행한다"는 가정에 기반한 값입니다. 실제 성능은 데이터가 필요한 시점에 도착하는지, 유닛 간 Stall이 발생하지 않는지에 따라 결정됩니다. 이 장은 그 두 가지를 각각 Data Reuse (Tiling)와 Pipeline이라는 소프트웨어 기법으로 설명합니다.
 

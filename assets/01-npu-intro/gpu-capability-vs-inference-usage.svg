@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="'Malgun Gothic','Apple SD Gothic Neo',sans-serif">
+  <rect x="0" y="0" width="900" height="380" fill="#ffffff"/>
+
+  <text x="450" y="26" font-size="15" fill="#64748b" text-anchor="middle">GPU의 트랜지스터 · 회로 자원 배분 (개념도)</text>
+
+  <!-- Proportion bar -->
+  <rect x="64" y="60" width="206" height="82" rx="10" fill="#2563eb"/>
+  <rect x="278" y="60" width="558" height="82" rx="10" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <text x="167" y="96" font-size="17" font-weight="bold" fill="#ffffff" text-anchor="middle">AI 추론에</text>
+  <text x="167" y="119" font-size="17" font-weight="bold" fill="#ffffff" text-anchor="middle">사용</text>
+  <text x="557" y="107" font-size="18" fill="#334155" text-anchor="middle">AI 추론에는 사용되지 않음</text>
+
+  <!-- Connectors -->
+  <line x1="167" y1="142" x2="167" y2="178" stroke="#2563eb" stroke-width="2"/>
+  <line x1="557" y1="142" x2="557" y2="178" stroke="#64748b" stroke-width="2"/>
+
+  <!-- Left callout: what inference uses -->
+  <rect x="22" y="182" width="290" height="140" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="167" y="208" font-size="16" font-weight="bold" fill="#1e3a8a" text-anchor="middle">AI 추론이 쓰는 것</text>
+  <text x="47" y="238" font-size="14.5" fill="#1e40af">• INT8 / FP16 행렬곱 (MAC)</text>
+  <text x="47" y="263" font-size="14.5" fill="#1e40af">• Tensor Core</text>
+  <text x="47" y="292" font-size="13.5" fill="#3b82f6">대규모로 반복 · 병렬 실행</text>
+
+  <!-- Right callout: what inference does not use -->
+  <rect x="297" y="182" width="520" height="140" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="557" y="208" font-size="16" font-weight="bold" fill="#334155" text-anchor="middle">AI 추론에는 쓰이지 않는 것</text>
+  <g font-size="14.5" fill="#475569">
+    <text x="322" y="238">• FP64 / FP32 고정밀 연산</text>
+    <text x="322" y="263">• 그래픽 파이프라인 · 텍스처 유닛</text>
+    <text x="322" y="288">• 워프 스케줄러</text>
+    <text x="572" y="238">• 복잡한 분기 · 조건문 제어</text>
+    <text x="572" y="263">• 큰 레지스터 파일 · L1/L2 캐시</text>
+    <text x="572" y="288">• 동적 인덱스 메모리 접근</text>
+  </g>
+
+  <text x="450" y="356" font-size="13" fill="#94a3b8" text-anchor="middle">위 비율은 실측치가 아니라 논지를 보여주기 위한 개념도입니다.</text>
+</svg>

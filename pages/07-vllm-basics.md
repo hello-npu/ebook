@@ -2,7 +2,7 @@
 
 ## 개요
 
-vLLM은 대규모 언어 모델(LLM) 추론과 서빙의 핵심 병목인 KV 캐시(KV cache) 메모리 관리와 배치 스케줄링을 혁신한 오픈소스 서빙 엔진입니다. 이 장에서는 LLM 추론의 구조적 병목 원인과 PagedAttention, 연속 배칭(Continuous Batching), vLLM V1 아키텍처, 그리고 분산 추론·양자화·Prefill/Decode 분리 기법을 하드웨어 동작 원리 수준에서 살펴봅니다. 이를 통해 향후 NPU 환경에서 LLM을 서빙([8장](08-llm-serving.md))하고 병목을 진단·개선([9장](09-serving-improve.md))하기 위한 기반 지식을 습득할 수 있습니다.
+vLLM은 대규모 언어 모델(LLM) 추론과 서빙의 핵심 병목인 KV 캐시(KV cache) 메모리 관리와 배치 스케줄링을 혁신한 오픈소스 서빙 엔진입니다. 이 장에서는 LLM 추론의 구조적 병목 원인과 PagedAttention, 연속 배칭(Continuous Batching), vLLM V1 아키텍처, 그리고 분산 추론·양자화·Prefill/Decode 분리 기법을 하드웨어 동작 원리 수준에서 살펴봅니다. 이를 통해 향후 NPU 환경에서 LLM을 서빙([08. NPU에 LLM 서빙하기](08-llm-serving.md))하고 병목을 진단·개선([09. vLLM 서빙 문제점과 개선기](09-serving-improve.md))하기 위한 기반 지식을 습득할 수 있습니다.
 
 ## 1. vLLM 개요 및 탄생 배경
 
@@ -207,6 +207,8 @@ $$\text{블록 1개당 메모리 (Bytes)} = 2 \times \text{num\_layers} \times \
 4. **내부 단편화 억제**:
    - 반대로 블록 크기를 64나 128 토큰으로 너무 크게 잡으면, 요청이 일찍 끝났을 때 마지막 블록에서 최대 63~127 토큰분의 메모리가 버려집니다. 16토큰은 마지막 블록의 최대 낭비를 15토큰 이하(전체 메모리의 4% 미만)로 억제합니다 [1].
 
+> 📝 확인 필요: 1·2번 항목의 128바이트 메모리 트랜잭션과 Tensor Core 16×16 MMA 타일, 아래 표의 PCIe 32~64 GB/s 수치에는 출처가 없습니다. 블록 크기 16을 고른 이유가 이 하드웨어 특성 때문이라는 설명도 [1]에서 확인해 출처를 붙여야 합니다.
+
 | 블록 크기 | GPU 워프 메모리 병합 접근 | 블록 테이블 크기 | 내부 단편화 낭비 | 종합 평가 |
 |:---:|---|---|---|---|
 | **1 토큰** | 최악 (32 스레드가 32번 따로 트랜잭션 발생, 대역폭 1/32 급락) | 매우 큼 (주소록 비대) | **0% (낭비 없음)** | 메모리 대역폭 병목으로 추론 속도가 심각하게 저하됩니다. |
@@ -225,7 +227,7 @@ $$\text{블록 1개당 메모리 (Bytes)} = 2 \times \text{num\_layers} \times \
 | **유리한 경우** | **단일 시퀀스 요청 (`n = 1`)**, Prefix Caching 및 Chunked Prefill 적용 환경 | 과거 V0에서 다중 시퀀스가 블록을 공유하던 빔 서치 (`n > 1`) |
 | **V1 엔진 현황** | **vLLM V1의 유일한 표준 선점 정책으로 단일화되었습니다 [3] [4].** | **V1 스케줄러에서 제거되었습니다** (CPU 메모리 활용은 `KVConnector` 오프로딩으로 분리). |
 
-> **왜 처음부터 다시 계산하는 `Recompute`가 복사해 두는 `Swap`보다 빠를까요?**
+> **왜 처음부터 다시 계산하는 `Recompute`가 복사해 두는 `Swap`보다 빠른가**
 >
 > 100토큰 프롬프트에 50토큰을 한 글자씩(Decode 50회) 생성하다가 선점되었을 때, 복귀 시 다시 50번 디코딩하는 것이 아니라 총 150토큰 전체를 단 1번의 병렬 행렬 연산(Prefill GEMM)으로 수 밀리초 만에 계산하기 때문입니다. 특히 vLLM V1에서는 앞부분 블록이 Prefix Caching으로 보존되고 재계산도 Chunked Prefill로 분할 처리되므로, 느린 PCIe 버스로 무거운 KV 텐서를 왕복 복사하는 `Swap`보다 `Recompute`가 유리하여 V1에서는 `Recompute` 단일 정책으로 통일되었습니다 [3].
 
@@ -598,12 +600,12 @@ vllm serve meta-llama/Llama-3.1-405B-Instruct --tensor-parallel-size 8 --pipelin
 
 #### GPU 내부 `CUDA Core`와 `Tensor Core`의 역할 분담
 
-GPU 칩(SM) 안에는 역할이 다른 두 종류의 연산 유닛이 함께 들어 있으며, 트랜스포머 레이어 안에서 교대로 분업합니다 [7]. ([2장](02-npu-hw-architecture-basic.md)에서 살펴본 NPU의 Vector Processor와 Tensor Processor의 분업 구조와 직접 대응됩니다.)
+GPU 칩(SM) 안에는 역할이 다른 두 종류의 연산 유닛이 함께 들어 있으며, 트랜스포머 레이어 안에서 교대로 분업합니다 [7]. ([02. NPU HW Architecture: AI 추론을 위한 전용 하드웨어](02-npu-hw-architecture-basic.md)에서 살펴본 NPU의 Vector Processor와 Tensor Processor의 분업 구조와 직접 대응됩니다.)
 
 | 비교 항목 | **CUDA Core** (범용 스칼라 연산기) | **Tensor Core** (행렬 곱셈 전용 연산기) |
 |---|---|---|
 | **1클럭당 처리 단위** | 숫자 1개 $\times$ 숫자 1개 + 숫자 1개 ($a \times b + c$ 단건 스칼라 연산) | 행렬 타일 $\times$ 행렬 타일 + 행렬 ($D = A \times B + C$, 예: `16×16` 행렬 타일 일괄 계산) |
-| **NPU 대응 유닛 ([2장](02-npu-hw-architecture-basic.md))** | Vector Processor (SIMD 원소 단위 연산) | Tensor / Matrix Processor (MAC Array / Systolic Array) |
+| **NPU 대응 유닛 ([02장](02-npu-hw-architecture-basic.md))** | Vector Processor (SIMD 원소 단위 연산) | Tensor / Matrix Processor (MAC Array / Systolic Array) |
 | **수행 가능한 연산** | 사칙연산, 나눗셈, $\sqrt{x}$, $\exp(x)$, $\sin/\cos$, 비트 연산(`LOP3`), 조건문 등 모든 수학 연산 | 행렬 곱셈·누적(MMA) 연산 전용 (나눗셈이나 지수 함수 등은 불가능) |
 | **연산 속도 (H100 SXM 기준)** | 약 **67 TFLOPS** (FP32) [7] | 약 **989 TFLOPS** (FP16) / **1,979 TFLOPS** (FP8) [7] |
 | **vLLM / LLM 내 담당 업무** | 행렬 곱셈이 아닌 나머지 연산: `LayerNorm` / `RMSNorm`, `RoPE` ($\sin, \cos$), `SiLU` / `GeLU` 활성화 함수, `Softmax` ($\exp$), `Marlin` 4비트 즉석 압축 해제 및 `kv_scale` 복원 | 전체 연산량(FLOPs)의 90% 이상을 차지하는 행렬 곱셈(GEMM): `Q, K, V, Output` 선형 투영, `FFN` (`Up / Gate / Down`), `FlashAttention` 내부의 $Q \times K^T$ 및 $\text{Score} \times V$ |

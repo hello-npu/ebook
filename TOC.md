@@ -4,7 +4,6 @@
 * [02. NPU HW Architecture: AI 추론을 위한 전용 하드웨어](pages/02-npu-hw-architecture-basic.md)
 * [03. Model Optimization: NPU 100% 활용하기](pages/03-model-optimization.md)
 * [04. Low Precision & Quantization: 성능과 효율 사이](pages/04-low-precision-and-quantization.md)
-* [04. 모델 컴파일과 최적화](pages/04-compile-optimize.md)
 * [05. RBLN SDK 시작하기: Hello, NPU!](pages/05-rbln-sdk.md)
 * [06. NLP 모델 구동기 및 벤치마크 성능 비교](pages/06-nlp-models.md)
 * [07. LLM과 vLLM 이해하기](pages/07-vllm-basics.md)

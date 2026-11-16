@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="'Malgun Gothic','Apple SD Gothic Neo',sans-serif">
+  <rect x="0" y="0" width="900" height="520" fill="#ffffff"/>
+
+  <defs>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrowGray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <text x="450" y="28" font-size="17" font-weight="bold" fill="#1e293b" text-anchor="middle">NPU의 트레이드오프: 무엇을 버리고, 무엇을 얻었는가</text>
+
+  <!-- Legend -->
+  <rect x="300" y="42" width="16" height="16" rx="3" fill="#fee2e2" stroke="#ef4444"/>
+  <text x="322" y="55" font-size="13" fill="#475569">버리는 것</text>
+  <rect x="420" y="42" width="16" height="16" rx="3" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="442" y="55" font-size="13" fill="#475569">얻는 것</text>
+
+  <!-- Row 1: Precision -->
+  <text x="40" y="94" font-size="16" font-weight="bold" fill="#1e293b">1. Precision 제한</text>
+  <rect x="140" y="104" width="280" height="74" rx="10" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="280" y="133" font-size="15" fill="#7f1d1d" text-anchor="middle">FP64 · FP32</text>
+  <text x="280" y="157" font-size="15" fill="#7f1d1d" text-anchor="middle">고정밀 연산 지원</text>
+  <line x1="420" y1="141" x2="512" y2="141" stroke="#475569" stroke-width="2" marker-end="url(#arrowRed)"/>
+  <text x="466" y="130" font-size="12.5" fill="#64748b" text-anchor="middle">제한</text>
+  <rect x="520" y="104" width="300" height="74" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="670" y="133" font-size="15" fill="#14532d" text-anchor="middle">INT8 · INT4</text>
+  <text x="670" y="157" font-size="15" fill="#14532d" text-anchor="middle">저정밀 연산에 집중 → 연산 밀도 ↑</text>
+
+  <!-- Row 2: Training -->
+  <text x="40" y="226" font-size="16" font-weight="bold" fill="#1e293b">2. Training 지원 제한</text>
+  <rect x="140" y="236" width="280" height="74" rx="10" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="280" y="265" font-size="15" fill="#7f1d1d" text-anchor="middle">역전파 · Optimizer</text>
+  <text x="280" y="289" font-size="15" fill="#7f1d1d" text-anchor="middle">높은 정밀도 필요</text>
+  <line x1="420" y1="273" x2="512" y2="273" stroke="#475569" stroke-width="2" marker-end="url(#arrowRed)"/>
+  <text x="466" y="262" font-size="12.5" fill="#64748b" text-anchor="middle">제한</text>
+  <rect x="520" y="236" width="300" height="74" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="670" y="265" font-size="15" fill="#14532d" text-anchor="middle">순전파만 반복</text>
+  <text x="670" y="289" font-size="15" fill="#14532d" text-anchor="middle">→ 정적 스케줄링 가능</text>
+
+  <!-- Row 3: Programmability -->
+  <text x="40" y="358" font-size="16" font-weight="bold" fill="#1e293b">3. Programmability 제한</text>
+  <rect x="140" y="368" width="280" height="74" rx="10" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="280" y="397" font-size="15" fill="#7f1d1d" text-anchor="middle">임의 연산 · 분기</text>
+  <text x="280" y="421" font-size="15" fill="#7f1d1d" text-anchor="middle">동적 메모리 접근</text>
+  <line x1="420" y1="405" x2="512" y2="405" stroke="#475569" stroke-width="2" marker-end="url(#arrowRed)"/>
+  <text x="466" y="394" font-size="12.5" fill="#64748b" text-anchor="middle">제한</text>
+  <rect x="520" y="368" width="300" height="74" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="670" y="397" font-size="15" fill="#14532d" text-anchor="middle">제한된 Operator Set</text>
+  <text x="670" y="421" font-size="15" fill="#14532d" text-anchor="middle">→ 단순한 제어 회로</text>
+
+  <!-- Converging connectors -->
+  <line x1="670" y1="178" x2="450" y2="470" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrowGray)"/>
+  <line x1="670" y1="310" x2="450" y2="470" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrowGray)"/>
+  <line x1="670" y1="442" x2="450" y2="470" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrowGray)"/>
+
+  <!-- Final box -->
+  <rect x="230" y="470" width="440" height="40" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+  <text x="450" y="496" font-size="17" font-weight="bold" fill="#1e3a8a" text-anchor="middle">AI 추론에 특화된 Efficiency</text>
+</svg>

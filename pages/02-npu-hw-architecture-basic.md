@@ -1,5 +1,3 @@
-# 02. NPU HW architecture: AI 추론을 위한 전용 하드웨어
-
 ## 개요
 
 AI 추론 전용 프로세서(NPU, Neural Processing Unit)의 코어는 크게 다섯 가지 블록으로 나뉩니다. 벤더마다 명칭은 다르지만 기본 구성은 거의 동일합니다. 이 장에서는 단일 코어의 내부 구조를 먼저 살펴본 뒤, 여러 코어를 배열하여 하나의 칩(SoC, System-on-Chip)을 구성하는 방식을 다룹니다. 읽고 나면 NPU의 하드웨어 계층 구조를 전반적으로 이해할 수 있습니다.
@@ -17,6 +15,8 @@ AI 추론 전용 프로세서(NPU, Neural Processing Unit)의 코어는 크게 �
 행렬 곱셈(GEMM)과 행렬 덧셈을 처리하는 핵심 연산기입니다. PyTorch 기준으로 `torch.matmul`, `nn.Linear`, `nn.Conv2d` 등이 이 유닛에서 실행됩니다. AI 추론 워크로드에서 전체 연산량의 대부분을 차지하기 때문에, NPU 설계에서 가장 많은 실리콘 면적과 전력 예산이 이 유닛에 할당됩니다.
 
 구현 방식은 벤더에 따라 갈립니다. Google TPU의 MXU는 128x128 고정 크기의 시스톨릭 어레이(Systolic Array)를 사용하고, NVIDIA GPU의 Tensor Core는 소형(예: 16x8x32) 행렬 연산 유닛을 SM마다 여러 개 배치합니다.
+
+> 📝 확인 필요: TPU MXU의 128x128 크기와 Tensor Core의 16x8x32 형상에 출처가 없습니다. 해당 세대의 공식 문서를 찾아 `[n]`을 붙여야 합니다.
 
 ### 1.2 Vector Processor
 
@@ -86,6 +86,8 @@ Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 �
 ![NPU 코어의 일반적인 데이터 흐름](../assets/02-npu-hw-architecture-basic/generic-npu-core-dataflow.jpeg)
 
 *그림 2-3. NPU 코어의 일반적인 데이터 흐름. 출처: [2]*
+
+> 📝 확인 필요: 그림 2-3의 출처([2])에 링크가 없습니다. 원 게시물 주소를 찾아 참고 2번 제목에 링크를 걸어야 합니다.
 
 다음 절에서는 이 코어를 N개 배열하고 NoC로 연결한 SoC 구조를 살펴봅니다.
 

@@ -1,5 +1,3 @@
-# 03. Model Optimization: NPU 100% 활용하기
-
 ## 개요
 
 [02. NPU HW Architecture: AI 추론을 위한 전용 하드웨어](02-npu-hw-architecture-basic.md)에서는 NPU 코어를 구성하는 다섯 블록(Tensor Processor, Vector Processor, DMA Engine, Task Manager, Scratch Pad Memory)을 살펴봤습니다 [1]. 이 장에서는 그 하드웨어를 소프트웨어(컴파일러와 런타임)가 어떻게 활용해야 연산기 Utilization을 최대화할 수 있는지 다룹니다. 행렬 곱을 담당하는 Tensor Processor는 이 장에서 역할을 강조해 Matrix Processor로 부르며, 2장의 Scratch Pad Memory는 On-chip SRAM과 같은 의미로 씁니다.

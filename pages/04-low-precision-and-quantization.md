@@ -1,5 +1,3 @@
-# 04. Low Precision & Quantization: 성능과 효율 사이
-
 ## 개요
 
 이 장에서는 FP32 실수가 scale과 zero-point를 거쳐 INT8 정수가 되는 원리와 calibration, PTQ·QAT를 먼저 다룹니다. 이어서 양자화된 모델이 NPU에서 실행되는 데이터 흐름, 저정밀 연산이 모델 크기·회로·정확도에 주는 영향, 그리고 그 이득이 메모리 트래픽 감소와 저정밀 MAC이라는 두 경로로 NPU 성능이 되는 과정을 살펴봅니다. 읽고 나면 양자화·복원 수식을 직접 계산할 수 있고, 워크로드가 memory-bound인지 compute-bound인지에 따라 양자화로 기대할 수 있는 이득을 판단할 수 있습니다.

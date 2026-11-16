@@ -1,5 +1,3 @@
-# 07. LLM과 vLLM 이해하기
-
 ## 개요
 
 vLLM은 대규모 언어 모델(LLM) 추론과 서빙의 핵심 병목인 KV 캐시(KV cache) 메모리 관리와 배치 스케줄링을 혁신한 오픈소스 서빙 엔진입니다. 이 장에서는 LLM 추론의 구조적 병목 원인과 PagedAttention, 연속 배칭(Continuous Batching), vLLM V1 아키텍처, 그리고 분산 추론·양자화·Prefill/Decode 분리 기법을 하드웨어 동작 원리 수준에서 살펴봅니다. 이를 통해 향후 NPU 환경에서 LLM을 서빙([08. NPU에 LLM 서빙하기](08-llm-serving.md))하고 병목을 진단·개선([09. vLLM 서빙 문제점과 개선기](09-serving-improve.md))하기 위한 기반 지식을 습득할 수 있습니다.

@@ -18,6 +18,8 @@ AI 추론 전용 프로세서(NPU, Neural Processing Unit)의 코어는 크게 �
 
 구현 방식은 벤더에 따라 갈립니다. Google TPU의 MXU는 128x128 고정 크기의 시스톨릭 어레이(Systolic Array)를 사용하고, NVIDIA GPU의 Tensor Core는 소형(예: 16x8x32) 행렬 연산 유닛을 SM마다 여러 개 배치합니다.
 
+> 📝 확인 필요: TPU MXU의 128x128 크기와 Tensor Core의 16x8x32 형상에 출처가 없습니다. 해당 세대의 공식 문서를 찾아 `[n]`을 붙여야 합니다.
+
 ### 1.2 Vector Processor
 
 행렬 곱셈이 아닌, 원소 단위(element-wise) 연산을 담당합니다.
@@ -86,6 +88,8 @@ Off-chip 메모리(DRAM 또는 HBM)와 코어 내부 SRAM 사이의 데이터 �
 ![NPU 코어의 일반적인 데이터 흐름](../assets/02-npu-hw-architecture-basic/generic-npu-core-dataflow.jpeg)
 
 *그림 2-3. NPU 코어의 일반적인 데이터 흐름. 출처: [2]*
+
+> 📝 확인 필요: 그림 2-3의 출처([2])에 링크가 없습니다. 원 게시물 주소를 찾아 참고 2번 제목에 링크를 걸어야 합니다.
 
 다음 절에서는 이 코어를 N개 배열하고 NoC로 연결한 SoC 구조를 살펴봅니다.
 

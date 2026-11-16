@@ -173,8 +173,8 @@ NPU 실행에 기록된 프롬프트(few-shot 문맥 포함)를 CPU fp32로 그�
 
 | 항목 | NPU | GPU |
 |---|---|---|
-| 장치 | Rebellions RBLN-CA22(ATOM) 1장 | NVIDIA RTX A5000 24GB[5], 2장 서버에서 1장만 사용 |
-| 메모리 대역폭 | 256GB/s[4] | 768GB/s[5] |
+| 장치 | Rebellions RBLN-CA22(ATOM) 1장 | NVIDIA RTX A5000 24GB[4], 2장 서버에서 1장만 사용 |
+| 메모리 대역폭 | 256GB/s[5] | 768GB/s[4] |
 | 소프트웨어 | rebel-compiler·optimum-rbln 0.10.1, torch 2.9.0+cpu, transformers 4.57.6 / vllm-rbln 0.10.1.post2(vLLM 0.13.0) | PyTorch 2.6.0+cu124, transformers 5.22.1, 드라이버 595.84 / vLLM 0.33.0(torch 2.14.0+cu130, transformers 5.20.2, 별도 가상환경) |
 | 호스트 | AMD EPYC 9254, 6 vCPU 가상 머신 | AMD Ryzen 9 7950X, 32코어 서버 |
 | 측정일 | 속도 2026-11-01, 에너지와 vllm-rbln 2026-11-04 | 2026-11-04 |
@@ -309,7 +309,7 @@ NPU에서도 vLLM 계열 엔진으로 같은 측정을 했습니다. vllm-rbln 0
 
 ### 5.5 대역폭 정규화
 
-디코드는 매 토큰마다 가중치 전체를 읽으므로 메모리 대역폭이 상한을 정합니다. 상한 = 대역폭 ÷ 가중치 크기이고, batch가 b이면 가중치를 한 번 읽고 b개 토큰을 만든다고 보고 b배로 계산했습니다. KV 캐시와 활성값을 넣지 않은 낙관적인 상한이며, 실제 도달 가능한 대역폭은 따로 재지 않았습니다. 가중치는 5.012GB, 대역폭은 NPU 256GB/s[4], A5000 768GB/s[5]입니다. 실측은 입력 128, 새 토큰 64개의 값입니다.
+디코드는 매 토큰마다 가중치 전체를 읽으므로 메모리 대역폭이 상한을 정합니다. 상한 = 대역폭 ÷ 가중치 크기이고, batch가 b이면 가중치를 한 번 읽고 b개 토큰을 만든다고 보고 b배로 계산했습니다. KV 캐시와 활성값을 넣지 않은 낙관적인 상한이며, 실제 도달 가능한 대역폭은 따로 재지 않았습니다. 가중치는 5.012GB, 대역폭은 NPU 256GB/s[5], A5000 768GB/s[4]입니다. 실측은 입력 128, 새 토큰 64개의 값입니다.
 
 | batch | NPU 상한 (tok/s) | NPU optimum 실측 / 상한 | NPU vllm-rbln 실측 / 상한 | GPU 상한 (tok/s) | GPU HF 실측 / 상한 | GPU vLLM (0.66) 실측 / 상한 |
 |---|---|---|---|---|---|---|
@@ -317,7 +317,7 @@ NPU에서도 vLLM 계열 엔진으로 같은 측정을 했습니다. vllm-rbln 0
 | 4 | 204.3 | 62.4% | 71.8% | 612.9 | 61.4% | 74.6% |
 | 8 | 408.6 | 53.4% | 65.0% | 1,225.9 | 60.0% | 73.3% |
 
-*표 10-11. 메모리 대역폭 기준 이론 상한 대비 실측 비율. 대역폭 출처: [4], [5]*
+*표 10-11. 메모리 대역폭 기준 이론 상한 대비 실측 비율. 대역폭 출처: [5], [4]*
 
 - 대역폭 비(768 ÷ 256 = 3.0배)와 batch 1의 실측 속도비(HF 99.7 ÷ 34.0 = 2.9배)가 거의 같습니다. batch 1에서 HF GPU와의 격차는 대부분 대역폭 차이로 설명되는 것으로 보이지만, 이는 사양값으로 계산한 추정이며 직접 검증하지 않았습니다. 이때 NPU optimum(66.7%)과 HF GPU(65.1%)가 상한의 비슷한 비율을 씁니다.
 - batch가 커지면 대역폭만으로 설명되지 않습니다. batch 8의 속도 격차는 HF 3.37배, vLLM 4.1배로 대역폭 비 3.0배를 넘습니다. 상한 대비 비율이 NPU optimum은 53.4%까지 떨어지는데 HF GPU는 60.0%, GPU vLLM은 73.3%로 유지되기 때문입니다. 원인(KV 캐시 접근, 연산, 호스트 오버헤드)은 분리해서 재지 않았습니다.
@@ -466,7 +466,7 @@ GPU는 같은 조건(batch 1, 8 고정, 입력 128/512/2048, 디코드 384토큰
 
 ### 5.9 한계
 
-- 하드웨어 급이 다릅니다. A5000의 최대 전력은 230W[6]이고 메모리 용량 24GB, 대역폭 768GB/s[5]입니다. NPU 카드의 최대 전력은 제품 문서로 확인하지 못해 적지 않았고, 측정 중 카드 전력은 프리필에서 최대 약 73W까지 올랐습니다. 가격, 크기, 발열이 다른 장치를 같은 줄에 세운 비교라서 "NPU 칩이 GPU 칩보다 빠르다 또는 느리다"로 일반화할 수 없습니다.
+- 하드웨어 급이 다릅니다. A5000의 최대 전력은 230W[6]이고 메모리 용량 24GB, 대역폭 768GB/s[4]입니다. NPU 카드의 최대 전력은 제품 문서로 확인하지 못해 적지 않았고, 측정 중 카드 전력은 프리필에서 최대 약 73W까지 올랐습니다. 가격, 크기, 발열이 다른 장치를 같은 줄에 세운 비교라서 "NPU 칩이 GPU 칩보다 빠르다 또는 느리다"로 일반화할 수 없습니다.
 - 소프트웨어 수준이 다릅니다. GPU HF는 최적화하지 않은 Hugging Face `generate`(파이썬 루프)이고 NPU는 컴파일된 정적 그래프입니다. vLLM에서 GPU가 약 20% 더 나왔으므로 GPU 값도 상한은 아니고, NPU도 컴파일 옵션을 더 조정하지 않았습니다. vLLM 두 엔진의 버전(0.33.0과 0.13.0)과 측정 방식(토큰 시각 대 호출 시간 차이)이 달라 "이 조합 대 이 조합"의 비교입니다.
 - GPU 메모리 16GB 제한은 같은 급 비교가 아닙니다. A5000의 일부만 쓰는 것이고 칩과 대역폭은 그대로입니다(5.3).
 - 정밀도가 같다고 확인하지 못했습니다. NPU 컴파일본은 fp32로 표기되어 있고 GPU는 bf16, fp16입니다. 속도 결론에는 영향이 없었지만 GPU와 NPU의 출력 일치는 비교하지 않았습니다.
@@ -573,6 +573,6 @@ GPU 유휴 전력은 12.9W(CUDA 사용 전 30초)와 15.4W(부하 직후 약 13�
 1. Hugging Face, [open-llm-leaderboard-old/results, google/gemma-2b 결과 JSON 2개](https://huggingface.co/datasets/open-llm-leaderboard-old/results/tree/main/google/gemma-2b), 2024-02-16·2024-02-22 실행, 2026-11-02 확인.
 2. Hugging Face, [Open LLM Leaderboard (old) About](https://huggingface.co/spaces/open-llm-leaderboard-old/open_llm_leaderboard/raw/main/src/display/about.py), 2026-11-02 확인.
 3. Gemma Team, [Gemma: Open Models Based on Gemini Research and Technology](https://arxiv.org/abs/2403.08295), Table 6, 2024.
-4. Rebellions, [ATOM Product Brief v3.1](https://rebellions.ai/wp-content/uploads/2023/09/Rebellions_ATOMProduct_Brief_v.3.1.pdf), v3.1, 2026-11-01 확인.
-5. NVIDIA, [NVIDIA RTX A5000 Datasheet](https://www.nvidia.com/content/dam/en-zz/Solutions/products/workstations/nvidia-rtx-a5000-datasheet.pdf), 2026-11-04 확인.
+4. NVIDIA, [NVIDIA RTX A5000 Datasheet](https://www.nvidia.com/content/dam/en-zz/Solutions/products/workstations/nvidia-rtx-a5000-datasheet.pdf), 2026-11-04 확인.
+5. Rebellions, [ATOM Product Brief v3.1](https://rebellions.ai/wp-content/uploads/2023/09/Rebellions_ATOMProduct_Brief_v.3.1.pdf), v3.1, 2026-11-01 확인.
 6. NVIDIA, [NVIDIA RTX A5000 제품 페이지](https://www.nvidia.com/en-us/design-visualization/rtx-a5000/), 2026-11-04 확인.

@@ -199,7 +199,7 @@ GPU와 NPU는 완전히 분리된 두 종류의 기계가 아닙니다. 둘은 �
 
 *그림 1-4. NPU 코어의 다섯 블록과 데이터 흐름. Control Unit이 컴파일 시점에 정한 순서대로 명령을 내리고, 데이터는 Off-chip 메모리에서 SRAM을 거쳐 연산 유닛으로 이동합니다. 출처: 직접 제작*
 
-[02. NPU HW Architecture: AI 추론을 위한 전용 하드웨어](02-npu-hw-architecture-basic.md)에서는 이 다섯 블록을 하나씩 살펴봅니다. 02장은 리벨리온 ATOM 문서의 이름을 따라 Matrix Processor를 Tensor Processor로, Control Unit을 Task Manager로, SRAM을 Scratch Pad Memory로 부릅니다. 이어서 이 코어 여러 개가 NoC(Network-on-Chip)로 연결된 멀티 코어 SoC(System-on-Chip)로 어떻게 확장되는지를 리벨리온 ATOM SoC 구조를 중심으로 다룹니다. NoC는 칩 안에서 코어 간 데이터를 주고받는 통신망이고, SoC는 여러 기능 블록을 하나의 칩에 통합한 구조입니다. 같은 문제를 NVIDIA H100, Qualcomm Cloud AI 100, FuriosaAI RNGD가 각자 어떻게 풀었는지도 함께 비교합니다.
+[02. NPU HW Architecture: AI 추론을 위한 전용 하드웨어](https://wikidocs.net/487809)에서는 이 다섯 블록을 하나씩 살펴봅니다. 02장은 리벨리온 ATOM 문서의 이름을 따라 Matrix Processor를 Tensor Processor로, Control Unit을 Task Manager로, SRAM을 Scratch Pad Memory로 부릅니다. 이어서 이 코어 여러 개가 NoC(Network-on-Chip)로 연결된 멀티 코어 SoC(System-on-Chip)로 어떻게 확장되는지를 리벨리온 ATOM SoC 구조를 중심으로 다룹니다. NoC는 칩 안에서 코어 간 데이터를 주고받는 통신망이고, SoC는 여러 기능 블록을 하나의 칩에 통합한 구조입니다. 같은 문제를 NVIDIA H100, Qualcomm Cloud AI 100, FuriosaAI RNGD가 각자 어떻게 풀었는지도 함께 비교합니다.
 
 ## 7. 리벨리온 NPU의 위치
 
@@ -210,7 +210,7 @@ GPU와 NPU는 완전히 분리된 두 종류의 기계가 아닙니다. 둘은 �
 | 실행 흐름 | PyTorch/HuggingFace 모델을 전용 SDK(RBLN SDK)로 컴파일한 뒤 NPU에서 구동 |
 | 지원 연산 | 개발자 문서의 지원 연산자 목록에서 확인 [6] |
 
-자세한 환경 구성은 [05. RBLN SDK 시작하기: Hello, NPU!](05-rbln-sdk.md)에서 다룹니다.
+자세한 환경 구성은 [05. RBLN SDK 시작하기: Hello, NPU!](https://wikidocs.net/488052)에서 다룹니다.
 
 ## 정리
 

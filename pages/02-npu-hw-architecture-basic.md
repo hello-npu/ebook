@@ -1,4 +1,4 @@
-# 02. NPU HW architecture: AI 추론을 위한 전용 하드웨어
+# 02. NPU HW Architecture: AI 추론을 위한 전용 하드웨어
 
 ## 개요
 

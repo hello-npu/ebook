@@ -1,4 +1,4 @@
-# 04. 저정밀 연산과 양자화
+# 04. Low Precision & Quantization: 성능과 효율 사이
 
 ## 개요
 

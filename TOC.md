@@ -1,12 +1,12 @@
 # 목차
 
-* [01. NPU란 무엇인가 / GPU vs NPU](pages/01-npu-intro.md)
-* [02. NPU HW architecture: AI 추론을 위한 전용 하드웨어](pages/02-npu-hw-architecture-basic.md)
+* [01. NPU Intro: 무엇을 버리고, 무엇을 얻었는가?](pages/01-npu-intro.md)
+* [02. NPU HW Architecture: AI 추론을 위한 전용 하드웨어](pages/02-npu-hw-architecture-basic.md)
 * [03. Model Optimization: NPU 100% 활용하기](pages/03-model-optimization.md)
-* [04. 저정밀 연산과 양자화](pages/04-low-precision-and-quantization.md)
+* [04. Low Precision & Quantization: 성능과 효율 사이](pages/04-low-precision-and-quantization.md)
 * [04. 모델 컴파일과 최적화](pages/04-compile-optimize.md)
-* [05. 비전·NLP 모델 구동기](pages/05-vision-nlp.md)
-* [06. 리벨리온 NPU 사용 예제](pages/06-rbln-sdk.md)
+* [05. RBLN SDK 시작하기: Hello, NPU!](pages/05-rbln-sdk.md)
+* [06. NLP 모델 구동기 및 벤치마크 성능 비교](pages/06-nlp-models.md)
 * [07. LLM과 vLLM 이해하기](pages/07-vllm-basics.md)
 * [08. NPU에 LLM 서빙하기](pages/08-llm-serving.md)
 * [09. vLLM 서빙 문제점과 개선기](pages/09-serving-improve.md)

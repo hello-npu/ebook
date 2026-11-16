@@ -1,0 +1,31 @@
+# main에 push되면 위키독스 연동용 미러 저장소로 그대로 밀어 넣는다.
+# 위키독스는 조직 저장소를 직접 연결할 수 없어서 개인 계정 미러에 연결되어 있다.
+# 미러는 한 방향이므로 원고는 항상 이 저장소에서 고친다.
+name: Mirror to WikiDocs repo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: wikidocs-mirror
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Push main to mirror
+        env:
+          TOKEN: ${{ secrets.WIKIDOCS_MIRROR_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::WIKIDOCS_MIRROR_TOKEN 시크릿이 없습니다."
+            exit 1
+          fi
+          git push --force "https://x-access-token:${TOKEN}@github.com/ugiugi0823/hello-npu-ebook.git" HEAD:refs/heads/main

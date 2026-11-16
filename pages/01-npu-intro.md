@@ -4,15 +4,7 @@
 
 **NPU(Neural Processing Unit)**는 AI 연산, 특히 추론(inference)에 특화된 프로세서입니다. 이 장은 NPU를 "AI용 빠른 칩"이 아니라 특정 워크로드에 맞춰 범용성을 의도적으로 줄인 설계로 이해하는 것을 목표로 합니다.
 
-| 절 | 다루는 질문 |
-|---|---|
-| 1. 왜 지금 NPU인가 | 추론 워크로드는 어떤 물리적 한계에 부딪히는가 |
-| 2. GPU의 딜레마 | GPU의 범용성은 추론에서 어떤 비용이 되는가 |
-| 3. NPU의 설계 철학 | NPU는 무엇을 버리고 무엇을 얻었는가 |
-| 4. 범용성-효율 스펙트럼 | GPU와 NPU는 어떤 관계에 있는가 |
-| 5. GPU vs NPU 비교 | 두 프로세서는 항목별로 어떻게 다른가 |
-| 6. 다음 장 미리보기 | 트레이드오프는 어떤 회로 블록으로 구현되는가 |
-| 7. 리벨리온 NPU의 위치 | 이 책에서 다루는 NPU는 어떻게 사용하는가 |
+이 장에서는 추론 워크로드가 부딪히는 물리적 한계와 GPU의 범용성이 추론에서 치르는 비용을 살펴봅니다. 이어서 NPU가 정밀도·학습 지원·프로그램 가능성의 세 축에서 무엇을 버리고 무엇을 얻었는지 정리합니다. 읽고 나면 GPU와 NPU의 차이를 설계 트레이드오프로 설명할 수 있고, 어떤 워크로드가 NPU에 잘 맞는지 판단하는 기준을 세울 수 있습니다.
 
 ## 1. 왜 지금 NPU인가
 
@@ -209,7 +201,7 @@ GPU와 NPU는 완전히 분리된 두 종류의 기계가 아닙니다. 둘은 �
 
 *그림 1-4. NPU 코어의 다섯 블록과 데이터 흐름. Control Unit이 컴파일 시점에 정한 순서대로 명령을 내리고, 데이터는 Off-chip 메모리에서 SRAM을 거쳐 연산 유닛으로 이동합니다. 출처: 직접 제작*
 
-[다음 장](02-npu-hw-architecture-basic.md)에서는 이 다섯 블록을 하나씩 살펴봅니다. 이어서 이 코어 여러 개가 NoC(Network-on-Chip)로 연결된 멀티 코어 SoC(System-on-Chip)로 어떻게 확장되는지를 리벨리온 ATOM SoC 구조를 중심으로 다룹니다. NoC는 칩 안에서 코어 간 데이터를 주고받는 통신망이고, SoC는 여러 기능 블록을 하나의 칩에 통합한 구조입니다. 같은 문제를 AWS Inferentia, Google TPU, NVIDIA GPU, FuriosaAI NPU가 각자 어떻게 풀었는지도 함께 비교합니다.
+[02. NPU HW Architecture: AI 추론을 위한 전용 하드웨어](02-npu-hw-architecture-basic.md)에서는 이 다섯 블록을 하나씩 살펴봅니다. 02장은 리벨리온 ATOM 문서의 이름을 따라 Matrix Processor를 Tensor Processor로, Control Unit을 Task Manager로, SRAM을 Scratch Pad Memory로 부릅니다. 이어서 이 코어 여러 개가 NoC(Network-on-Chip)로 연결된 멀티 코어 SoC(System-on-Chip)로 어떻게 확장되는지를 리벨리온 ATOM SoC 구조를 중심으로 다룹니다. NoC는 칩 안에서 코어 간 데이터를 주고받는 통신망이고, SoC는 여러 기능 블록을 하나의 칩에 통합한 구조입니다. 같은 문제를 NVIDIA H100, Qualcomm Cloud AI 100, FuriosaAI RNGD가 각자 어떻게 풀었는지도 함께 비교합니다.
 
 ## 7. 리벨리온 NPU의 위치
 
@@ -220,7 +212,7 @@ GPU와 NPU는 완전히 분리된 두 종류의 기계가 아닙니다. 둘은 �
 | 실행 흐름 | PyTorch/HuggingFace 모델을 전용 SDK(RBLN SDK)로 컴파일한 뒤 NPU에서 구동 |
 | 지원 연산 | 개발자 문서의 지원 연산자 목록에서 확인 [6] |
 
-자세한 환경 구성은 [02. 리벨리온 NPU & RBLN SDK 시작하기](02-rbln-sdk.md)에서 다룹니다.
+자세한 환경 구성은 [05. RBLN SDK 시작하기: Hello, NPU!](05-rbln-sdk.md)에서 다룹니다.
 
 ## 정리
 
@@ -235,8 +227,8 @@ GPU와 NPU는 완전히 분리된 두 종류의 기계가 아닙니다. 둘은 �
 2. Pope et al., [Efficiently Scaling Transformer Inference](https://arxiv.org/abs/2211.05102), MLSys, 2023.
 3. Chen et al., [Eyeriss: A Spatial Architecture for Energy-Efficient Dataflow for Convolutional Neural Networks](https://ieeexplore.ieee.org/document/7551407), ISCA, 2016.
 4. Jouppi et al., [TPU v4: An Optically Reconfigurable Supercomputer for Machine Learning with Hardware Support for Embeddings](https://arxiv.org/abs/2304.01433), arXiv:2304.01433, 2023.
-5. Wikimedia Commons, [File:TPU v4.png](https://commons.wikimedia.org/wiki/File:TPU_v4.png), CC BY 4.0, (확인일 확인 필요).
-6. Rebellions, [지원 연산자(Operator) 목록 — PyTorch](https://docs.rbln.ai/latest/ko/misc/supported_ops_pytorch.html), RBLN SDK 개발자 문서, (확인일 확인 필요).
-7. Arm, [Vela Compiler: Deploy your NN model on the Arm Ethos-U microNPU](https://developer.arm.com/community/arm-community-blogs/b/ai-blog/posts/vela-compiler-deploy-your-nn-model-on-the-arm-ethos-u-micronpu), Arm Community AI Blog, (확인일 확인 필요).
+5. Wikimedia Commons, [File:TPU v4.png](https://commons.wikimedia.org/wiki/File:TPU_v4.png), CC BY 4.0, 2026-11-16 확인.
+6. Rebellions, [지원 연산자(Operator) 목록 — PyTorch](https://docs.rbln.ai/latest/ko/misc/supported_ops_pytorch.html), RBLN SDK 개발자 문서, 2026-11-16 확인.
+7. Liliya Wu (Arm), [Vela Compiler: The first step to deploy your NN model on the Arm Ethos-U microNPU](https://developer.arm.com/community/arm-community-blogs/b/ai-blog/posts/vela-compiler-deploy-your-nn-model-on-the-arm-ethos-u-micronpu), Arm Community AI Blog, 2022, 2026-11-16 확인.
 8. Jouppi et al., [In-Datacenter Performance Analysis of a Tensor Processing Unit](https://arxiv.org/abs/1704.04760), ISCA, 2017.
-9. Rebellions, [ATOM Generative AI White Paper](https://rebellions.ai/wp-content/uploads/2024/07/ATOMgenAI_white-paper.pdf), 백서, (연도 확인 필요).
+9. Rebellions, [ATOM Generative AI White Paper](https://rebellions.ai/wp-content/uploads/2024/07/ATOMgenAI_white-paper.pdf), 백서, 2024.

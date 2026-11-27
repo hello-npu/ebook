@@ -28,7 +28,7 @@ ebook/
 
 ## 빠른 시작
 
-1. 저장소를 클론하고 브랜치를 만듭니다: `git switch -c docs/08-serving`
+1. 저장소를 클론하고 브랜치를 만듭니다: `git switch -c docs/09-serving`
 2. `pages/`에서 담당 장을 작성·수정합니다. (형식은 [templates/chapter.md](templates/chapter.md))
 3. 새 페이지를 만들었다면 [TOC.md](TOC.md)에 등록합니다.
 4. 커밋 후 Pull Request를 올립니다. 리뷰를 거쳐 `main`에 머지되면 미러 Action을 거쳐 위키독스에 발행됩니다(아래 [발행 경로](#발행-경로)).
@@ -37,7 +37,7 @@ ebook/
 
 작성 규약은 [AGENTS.md](AGENTS.md)를 따릅니다. 핵심만:
 
-- 한국어 합니다체, 용어는 [용어집](pages/12-glossary.md) 기준
+- 한국어 합니다체, 용어는 [용어집](pages/13-glossary.md) 기준
 - 파일명 `NN-slug.md`(두 자리 번호). 본문에 H1(`#`)을 쓰지 않고 `## 개요`로 시작합니다. 장 제목은 `TOC.md`에만 쓰고, 파일 번호와 TOC 제목 번호를 맞춥니다.
 - 추정값·지어낸 수치 금지. 실제 결과만, 없으면 `> 📝 실습 채움`
 

@@ -1,6 +1,6 @@
 ## 개요
 
-NLP 모델을 리벨리온 NPU에 올려 구동하고 정확도·속도·전력을 측정한 기록입니다. BERT 계열(RoBERTa 분류, MiniLM 임베딩)과 디코더 LLM인 gemma-2b를 다루며, 비교 기준은 같은 서버의 CPU입니다. 읽고 나면 HuggingFace 모델을 컴파일해 NPU에서 추론하고, 정확도·속도·전력을 같은 방식으로 재 볼 수 있습니다. GPU와의 비교와 공개 벤치마크 점수와의 비교는 [10. 벤치마크 모음](https://wikidocs.net/487817)에 따로 모았습니다.
+NLP 모델을 리벨리온 NPU에 올려 구동하고 정확도·속도·전력을 측정한 기록입니다. BERT 계열(RoBERTa 분류, MiniLM 임베딩)과 디코더 LLM인 gemma-2b를 다루며, 비교 기준은 같은 서버의 CPU입니다. 읽고 나면 HuggingFace 모델을 컴파일해 NPU에서 추론하고, 정확도·속도·전력을 같은 방식으로 재 볼 수 있습니다. GPU와의 비교와 공개 벤치마크 점수와의 비교는 [11. 벤치마크 모음](https://wikidocs.net/487817)에 따로 모았습니다.
 
 ## 1. 실험 환경
 
@@ -13,7 +13,7 @@ NLP 모델을 리벨리온 NPU에 올려 구동하고 정확도·속도·전력�
 | 호스트 | AMD EPYC 9254, 6 vCPU, RAM 70GB, Ubuntu 24.04 (가상 환경) |
 | 측정일 | gemma-2b 2026-11-01, BERT 계열 2026-11-02 |
 
-비교 대상 CPU는 같은 호스트의 PyTorch(fp32, bf16)입니다. CPU는 6 vCPU의 공유 가상 서버이므로 더 큰 CPU나 GPU와의 비교로 일반화할 수 없습니다. GPU(RTX A5000)와의 직접 비교는 [10. 벤치마크 모음](https://wikidocs.net/487817)의 5절(gemma-2b)과 6절(BERT 계열)에서 다룹니다.
+비교 대상 CPU는 같은 호스트의 PyTorch(fp32, bf16)입니다. CPU는 6 vCPU의 공유 가상 서버이므로 더 큰 CPU나 GPU와의 비교로 일반화할 수 없습니다. GPU(RTX A5000)와의 직접 비교는 [11. 벤치마크 모음](https://wikidocs.net/487817)의 5절(gemma-2b)과 6절(BERT 계열)에서 다룹니다.
 
 ## 2. BERT 계열 구동
 
@@ -141,9 +141,9 @@ SST-2 validation 872문장 전체로 쟀습니다. 기준은 CPU PyTorch fp32 �
 - 평균 오차 0.013은 로짓 절대값 평균(3.11)의 약 0.4%입니다. CPU bf16(0.0087)과 같은 자릿수의 편차입니다.
 - NPU 내부 연산 정밀도는 확인하지 못했습니다. 컴파일 설정 파일의 dtype은 float32였지만 실제 내부 정밀도와 같은지는 확인하지 않았습니다.
 
-![CPU fp32 대비 NPU 로짓 마진 산점도](../assets/06-nlp-models/bert-accuracy-margin.jpg)
+![CPU fp32 대비 NPU 로짓 마진 산점도](../assets/07-nlp-models/bert-accuracy-margin.jpg)
 
-*그림 6-1. CPU fp32 대비 로짓 마진(긍정−부정) 산점도. 왼쪽은 NPU(batch 16, L128), 오른쪽은 CPU bf16. 출처: 직접 제작*
+*그림 7-1. CPU fp32 대비 로짓 마진(긍정−부정) 산점도. 왼쪽은 NPU(batch 16, L128), 오른쪽은 CPU bf16. 출처: 직접 제작*
 
 임베딩(MiniLM)은 SST-2 validation 872문장의 평균 풀링 임베딩을 CPU fp32 결과와 비교했습니다.
 
@@ -174,9 +174,9 @@ CPU와 코사인 0.99992 이상이었습니다. 다운스트림 검색 정확도
 - NPU의 반복 간 편차는 작았습니다. p5~p95가 중앙값의 ±10% 이내인 조건이 대부분이었습니다.
 - MiniLM 임베딩은 batch 16, L128에서 NPU 3505 samples/s, CPU fp32 87.3 samples/s였습니다.
 
-![RoBERTa 분류의 길이별 latency와 throughput](../assets/06-nlp-models/bert-speed.jpg)
+![RoBERTa 분류의 길이별 latency와 throughput](../assets/07-nlp-models/bert-speed.jpg)
 
-*그림 6-2. RoBERTa-base SST-2의 L별 latency와 throughput. 출처: 직접 제작*
+*그림 7-2. RoBERTa-base SST-2의 L별 latency와 throughput. 출처: 직접 제작*
 
 고정 길이 컴파일의 비용도 있습니다. SST-2 문장은 평균 26토큰인데 가장 짧은 L64로 패딩해도 평균 2.5배를 연산합니다. 이를 보려고 CPU에서 872문장을 패딩 없이 batch 1로 처리했더니 fp32 중앙값은 38.2ms, bf16은 19.9ms였습니다. 이 기준으로 비교해도 NPU batch 1, L64(1.13ms)는 CPU fp32의 약 34배, bf16의 약 18배 빨랐습니다. 길이가 다양한 서비스에서는 여러 L로 컴파일해 두고 문장 길이에 맞춰 고르는 방식이 필요합니다. 이 장에서는 그런 서빙을 만들거나 측정하지 않았습니다.
 
@@ -197,9 +197,9 @@ CPU 측정은 단일 실행이라 불확실성이 있습니다. batch 1, L64를 
 - 같은 batch 16에서 L을 128에서 512로 늘리면 샘플당 에너지가 약 4.6배(70→326mJ)가 되었습니다. 패딩 길이를 크게 잡는 만큼 에너지가 낭비됩니다.
 - CPU 전력은 측정하지 못했습니다. 가상 환경이라 RAPL/hwmon 센서가 없습니다. 따라서 CPU와의 에너지 효율 비교는 하지 않았습니다.
 
-![NPU 카드 전력 시계열](../assets/06-nlp-models/bert-power-trace.jpg)
+![NPU 카드 전력 시계열](../assets/07-nlp-models/bert-power-trace.jpg)
 
-*그림 6-3. RoBERTa-base 추론 중 NPU 카드 전력 시계열. 출처: 직접 제작*
+*그림 7-3. RoBERTa-base 추론 중 NPU 카드 전력 시계열. 출처: 직접 제작*
 
 ## 4. gemma-2b 구동
 
@@ -265,12 +265,12 @@ print(tok.decode(out[0], skip_special_tokens=True))
 | HellaSwag 글자 선택 | 30.0% | 29.5% | 93.5% |
 
 - perplexity 차이는 +0.04%였습니다. wikitext-2 test의 앞부분 1023토큰 비중첩 창 64개이며 전체 test 세트가 아닙니다.
-- 문항 200개의 표준오차는 약 3%p이므로 0.5%p 차이는 문항 1개 차이이고 의미가 없습니다. 이 점수는 공개 리더보드 수치와 직접 비교하지 않습니다. 공개 GPU 수치와의 비교는 [10. 벤치마크 모음](https://wikidocs.net/487817)의 4절에서 다룹니다.
+- 문항 200개의 표준오차는 약 3%p이므로 0.5%p 차이는 문항 1개 차이이고 의미가 없습니다. 이 점수는 공개 리더보드 수치와 직접 비교하지 않습니다. 공개 GPU 수치와의 비교는 [11. 벤치마크 모음](https://wikidocs.net/487817)의 4절에서 다룹니다.
 - 글자 선택은 보기를 A~D로 나열하고 다음 토큰의 로짓을 비교하는 방식입니다. gemma-2b 베이스가 이 형식에 약해 HellaSwag는 우연 수준(25%)에 가깝습니다. 이 방식은 점수 자체보다 CPU와 같은 답을 내는지 보는 용도로만 썼습니다.
 
-![gemma-2b 정확도 비교](../assets/06-nlp-models/gemma2b-accuracy.jpg)
+![gemma-2b 정확도 비교](../assets/07-nlp-models/gemma2b-accuracy.jpg)
 
-*그림 6-4. gemma-2b의 CPU fp32 대비 NPU 정확도. 출처: 직접 제작*
+*그림 7-4. gemma-2b의 CPU fp32 대비 NPU 정확도. 출처: 직접 제작*
 
 고정 프롬프트 100개로 64토큰을 greedy 생성한 결과는 다음과 같습니다.
 
@@ -281,13 +281,13 @@ print(tok.decode(out[0], skip_special_tokens=True))
 
 NPU가 비트 단위로 같은 결과를 내는 것은 아닙니다. 다만 CPU에서 bf16으로 돌렸을 때보다 fp32와 덜 어긋났으므로 일반적인 저정밀 추론 수준의 편차로 판단합니다. 첫 불일치 위치는 2~62에 분포했고 앞쪽(2~4)에서 갈라진 시퀀스도 있었습니다. 프롬프트 100개, 단일 실행이어서 이 순위의 통계적 유의성은 검정하지 않았습니다.
 
-![첫 불일치 위치 분포](../assets/06-nlp-models/gemma2b-first-mismatch.jpg)
+![첫 불일치 위치 분포](../assets/07-nlp-models/gemma2b-first-mismatch.jpg)
 
-*그림 6-5. greedy 생성에서 CPU fp32와 처음 갈라진 토큰 위치. 출처: 직접 제작*
+*그림 7-5. greedy 생성에서 CPU fp32와 처음 갈라진 토큰 위치. 출처: 직접 제작*
 
 ### 5.2 속도
 
-NPU 결과(중앙값)입니다. 이 장의 비교 기준(CPU)은 6 vCPU 가상 머신이며, NPU와 GPU의 비교는 [10. 벤치마크 모음](https://wikidocs.net/487817)에서 다룹니다. 여기서 CPU는 참고용 기준선입니다.
+NPU 결과(중앙값)입니다. 이 장의 비교 기준(CPU)은 6 vCPU 가상 머신이며, NPU와 GPU의 비교는 [11. 벤치마크 모음](https://wikidocs.net/487817)에서 다룹니다. 여기서 CPU는 참고용 기준선입니다.
 
 | batch | 입력 길이 | TTFT (s) | 디코드 (ms/step) | tok/s (시퀀스당) | tok/s (전체) |
 |---|---|---|---|---|---|
@@ -316,15 +316,15 @@ CPU 결과(batch 1, 중앙값)입니다.
 
 디코드 속도의 이론 상한은 가중치 읽기만 센 낙관적인 값입니다. 가중치는 5.012GB(HF 체크포인트의 `total_size`), 카드 메모리 대역폭은 256GB/s입니다[1]. 상한은 256 ÷ 5.012 = 51.1 tok/s이고, batch 1의 실측 34.05 tok/s는 상한의 66.7%입니다. batch 4는 62.4%, batch 8은 53.4%로 batch가 커질수록 비율이 떨어졌습니다. 원인(KV 캐시 접근, 연산, 호스트 오버헤드 중 무엇인지)은 분리해 측정하지 않았습니다.
 
-![gemma-2b 속도](../assets/06-nlp-models/gemma2b-speed.jpg)
+![gemma-2b 속도](../assets/07-nlp-models/gemma2b-speed.jpg)
 
-*그림 6-6. gemma-2b의 NPU와 CPU 속도(TTFT, 디코드 tok/s). 출처: 직접 제작*
+*그림 7-6. gemma-2b의 NPU와 CPU 속도(TTFT, 디코드 tok/s). 출처: 직접 제작*
 
 ### 5.3 효율
 
 입력 128토큰에서 384토큰을 생성하며 3회 반복했습니다. 디코드 구간의 전력 샘플(조건당 24~33개)을 평균했습니다. 유휴 전력은 모델 없이 30초 잰 평균이 측정 전 25.3W, 측정 후 26.1W입니다.
 
-처음 측정(2026-11-01)에서는 유휴 전력을 27.5W로 적었으나, 다시 재 보니 튀는 값 하나(42W)가 평균을 올린 것이었습니다. 또 `card_power`가 실제 부하보다 약 2초 늦게 반응하는 것을 확인해, 이 표는 센서 시각을 보정해 다시 계산한 값(2026-11-04)입니다. 보정 방법과 입력 길이별 결과는 [10. 벤치마크 모음](https://wikidocs.net/487817)의 5.6에 있습니다.
+처음 측정(2026-11-01)에서는 유휴 전력을 27.5W로 적었으나, 다시 재 보니 튀는 값 하나(42W)가 평균을 올린 것이었습니다. 또 `card_power`가 실제 부하보다 약 2초 늦게 반응하는 것을 확인해, 이 표는 센서 시각을 보정해 다시 계산한 값(2026-11-04)입니다. 보정 방법과 입력 길이별 결과는 [11. 벤치마크 모음](https://wikidocs.net/487817)의 5.6에 있습니다.
 
 | batch | 평균 전력 (W) | tok/s (전체) | tokens/s per W | J/토큰 |
 |---|---|---|---|---|
@@ -338,9 +338,9 @@ CPU 결과(batch 1, 중앙값)입니다.
 - 카드 전력만이며 호스트 CPU 전력은 빠져 있습니다. 샘플은 1Hz여서 정밀한 값은 아닙니다.
 - CPU 전력은 측정하지 못했으므로 CPU와의 에너지 효율 비교는 하지 않았습니다.
 
-![gemma-2b 전력 시계열](../assets/06-nlp-models/gemma2b-power-trace.jpg)
+![gemma-2b 전력 시계열](../assets/07-nlp-models/gemma2b-power-trace.jpg)
 
-*그림 6-7. gemma-2b 디코드 중 NPU 카드 전력 시계열(2026-11-01 측정, 센서 시각 보정 전). 출처: 직접 제작*
+*그림 7-7. gemma-2b 디코드 중 NPU 카드 전력 시계열(2026-11-01 측정, 센서 시각 보정 전). 출처: 직접 제작*
 
 ## 정리
 

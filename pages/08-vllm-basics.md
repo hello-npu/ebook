@@ -1,6 +1,6 @@
 ## 개요
 
-vLLM은 대규모 언어 모델(LLM) 추론과 서빙의 핵심 병목인 KV 캐시(KV cache) 메모리 관리와 배치 스케줄링을 혁신한 오픈소스 서빙 엔진입니다. 이 장에서는 LLM 추론의 구조적 병목 원인과 PagedAttention, 연속 배칭(Continuous Batching), vLLM V1 아키텍처, 그리고 분산 추론·양자화·Prefill/Decode 분리 기법을 하드웨어 동작 원리 수준에서 살펴봅니다. 이를 통해 향후 NPU 환경에서 LLM을 서빙([08. NPU에 LLM 서빙하기](https://wikidocs.net/487815))하고 병목을 진단·개선([09. vLLM 서빙 문제점과 개선기](https://wikidocs.net/487816))하기 위한 기반 지식을 습득할 수 있습니다.
+vLLM은 대규모 언어 모델(LLM) 추론과 서빙의 핵심 병목인 KV 캐시(KV cache) 메모리 관리와 배치 스케줄링을 혁신한 오픈소스 서빙 엔진입니다. 이 장에서는 LLM 추론의 구조적 병목 원인과 PagedAttention, 연속 배칭(Continuous Batching), vLLM V1 아키텍처, 그리고 분산 추론·양자화·Prefill/Decode 분리 기법을 하드웨어 동작 원리 수준에서 살펴봅니다. 이를 통해 향후 NPU 환경에서 LLM을 서빙([09. NPU에 LLM 서빙하기](https://wikidocs.net/487815))하고 병목을 진단·개선([10. vLLM 서빙 문제점과 개선기](https://wikidocs.net/487816))하기 위한 기반 지식을 습득할 수 있습니다.
 
 ## 1. vLLM 개요 및 탄생 배경
 
@@ -42,9 +42,9 @@ vLLM은 대규모 언어 모델(LLM)을 높은 처리량(throughput)과 낮은 �
 
 ### 1.4 vLLM 발전사 및 로드맵
 
-![vLLM 발전 타임라인](../assets/07-vllm-basics/vllm-history-roadmap.png)
+![vLLM 발전 타임라인](../assets/08-vllm-basics/vllm-history-roadmap.png)
 
-*그림 7-1. vLLM 발전 타임라인. 출처: 직접 제작*
+*그림 8-1. vLLM 발전 타임라인. 출처: 직접 제작*
 
 - **2023.06**: UC Berkeley Sky Computing Lab에서 vLLM 프로젝트와 PagedAttention을 공개했습니다.
 - **2023.09**: SOSP 2023 학회에서 원 논문(*Efficient Memory Management for Large Language Model Serving with PagedAttention*)을 발표했습니다 [1].
@@ -57,17 +57,17 @@ vLLM은 대규모 언어 모델(LLM)을 높은 처리량(throughput)과 낮은 �
 
 기존 연속 메모리 할당 기반의 서빙 시스템이 겪었던 60~80% 메모리 손실은 다음 세 가지 원인에서 비롯됩니다 [1] [5].
 
-![기존 연속 메모리 할당의 KV 캐시 메모리 낭비 원인](../assets/07-vllm-basics/kv-cache-waste-ppt-slide.png)
+![기존 연속 메모리 할당의 KV 캐시 메모리 낭비 원인](../assets/08-vllm-basics/kv-cache-waste-ppt-slide.png)
 
-*그림 7-2. 기존 연속 메모리 할당의 KV 캐시 메모리 낭비 원인. 출처: 직접 제작*
+*그림 8-2. 기존 연속 메모리 할당의 KV 캐시 메모리 낭비 원인. 출처: 직접 제작*
 
 1. **내부 단편화 (Internal Fragmentation)**: 최대 길이(예: 2,048 토큰)를 미리 예약했으나 요청이 조기에 종료(예: 100 토큰 생성 후 `EOS`)되면, 할당된 영역 안의 나머지 1,948칸이 사용되지 못한 채 버려집니다.
 2. **예약 낭비 (Reservation Waste)**: 언젠가 쓰일 수는 있지만 아직 생성되지 않은 미래 토큰 자리를 미리 점유하고 있어서, 토큰이 생성되는 동안 다른 요청이 해당 VRAM 공간을 전혀 사용할 수 없습니다.
 3. **외부 단편화 (External Fragmentation)**: 길이가 서로 다른 요청들의 할당과 해제가 반복되면서 메모리 풀 곳곳에 불규칙한 자투리 빈 공간이 생깁니다. 전체 빈 공간을 합치면 충분하더라도 연속된 큰 공간이 없으면 새 요청을 받지 못하고 메모리 부족(OOM) 오류가 발생합니다.
 
-![시스템별 평균 KV 캐시 메모리 사용 비율 비교](../assets/07-vllm-basics/pagedattention-paper-figure-02-kv-usage.png)
+![시스템별 평균 KV 캐시 메모리 사용 비율 비교](../assets/08-vllm-basics/pagedattention-paper-figure-02-kv-usage.png)
 
-*그림 7-3. 시스템별 평균 KV 캐시 메모리 사용 비율 비교(초록색 영역이 실제 토큰이 저장된 유효 사용률). 출처: [1] Figure 2*
+*그림 8-3. 시스템별 평균 KV 캐시 메모리 사용 비율 비교(초록색 영역이 실제 토큰이 저장된 유효 사용률). 출처: [1] Figure 2*
 
 기존 연속 메모리 할당 기반 서빙 엔진(Orca)은 메모리를 사전에 예약하는 전략에 따라 세 가지 베이스라인을 시도했으나, 유효 메모리 사용률이 20.4~38.2%에 머물렀습니다 [1].
 
@@ -102,9 +102,9 @@ Step 2: 토큰 2 계산 -> [K2], [V2] 캐시 추가 -> K1, V1은 VRAM에서 로�
 Step 3: 토큰 3 계산 -> [K3], [V3] 캐시 추가 -> K1~2, V1~2는 VRAM에서 로드
 ```
 
-![새 위치의 Q와 과거·현재 K/V로 attention을 계산하는 과정](../assets/07-vllm-basics/kv-cache-attention.png)
+![새 위치의 Q와 과거·현재 K/V로 attention을 계산하는 과정](../assets/08-vllm-basics/kv-cache-attention.png)
 
-*그림 7-4. 새로 입력된 토큰 위치에 대해서만 Q, K, V를 계산하고 과거 토큰들의 K와 V는 KV 캐시에서 읽어 오는 과정. 출처: 직접 제작*
+*그림 8-4. 새로 입력된 토큰 위치에 대해서만 Q, K, V를 계산하고 과거 토큰들의 K와 V는 KV 캐시에서 읽어 오는 과정. 출처: 직접 제작*
 
 하나의 시퀀스가 차지하는 유효 KV 캐시 크기는 다음 공식으로 계산됩니다 [2].
 
@@ -120,9 +120,9 @@ $$\text{KV Cache Size (Bytes)} = 2 \times \text{num\_layers} \times \text{num\_k
 
 80GB A100 GPU에서 LLaMA-13B(가중치 약 26GB)를 서빙할 때 남는 가용 VRAM은 약 54GB입니다. 과거 방식처럼 요청당 2,048 토큰 기준 약 1.6GB를 연속 공간으로 고정 예약하면 동시에 처리할 수 있는 요청은 약 30개에 불과합니다 [1] [2].
 
-![가상 GQA 모델의 유효 KV 용량 스케일링](../assets/07-vllm-basics/kv-capacity-scaling.png)
+![가상 GQA 모델의 유효 KV 용량 스케일링](../assets/08-vllm-basics/kv-capacity-scaling.png)
 
-*그림 7-5. Attention 구조(MHA, GQA, MQA)별 유효 KV 용량 스케일링. 출처: 직접 제작*
+*그림 8-5. Attention 구조(MHA, GQA, MQA)별 유효 KV 용량 스케일링. 출처: 직접 제작*
 
 Attention 구조에 따라 요청당 KV 캐시 크기는 크게 달라집니다 ($L=32, d=128, \text{seq\_len}=8192$, BF16 기준) [2].
 
@@ -145,17 +145,17 @@ vLLM은 운영체제의 가상 메모리 페이징 기법을 KV 캐시 관리에
 | **페이지 테이블 (Page Table)** | **블록 테이블 (Block Table)**: 논리 블록 번호를 실제 물리 블록 ID로 연결하는 매핑 장부입니다. |
 | **요구 페이징 (Demand Paging)** | **동적 블록 할당**: 토큰이 실제로 생성되어 이전 블록이 꽉 찰 때마다 새 물리 블록을 1개씩 배정합니다. |
 
-![내부 단편화 개념도](../assets/07-vllm-basics/kv-internal-fragmentation.png)
+![내부 단편화 개념도](../assets/08-vllm-basics/kv-internal-fragmentation.png)
 
-*그림 7-6. 내부 단편화 개념도. PagedAttention에서도 각 시퀀스의 마지막 블록에 한해 미사용 슬롯(최대 15토큰, 전체 메모리의 4% 미만)이 남을 수 있습니다. 출처: 직접 제작*
+*그림 8-6. 내부 단편화 개념도. PagedAttention에서도 각 시퀀스의 마지막 블록에 한해 미사용 슬롯(최대 15토큰, 전체 메모리의 4% 미만)이 남을 수 있습니다. 출처: 직접 제작*
 
-![외부 단편화와 페이징 해결 개념도](../assets/07-vllm-basics/kv-external-fragmentation-paging.png)
+![외부 단편화와 페이징 해결 개념도](../assets/08-vllm-basics/kv-external-fragmentation-paging.png)
 
-*그림 7-7. 외부 단편화와 페이징 해결 개념도. 물리 메모리에 빈 조각이 흩어져 있어도 모든 블록 크기가 16토큰으로 동일하므로 물리 블록 7, 1, 3을 비연속적으로 매핑하여 외부 단편화를 0%로 제거합니다. 출처: 직접 제작*
+*그림 8-7. 외부 단편화와 페이징 해결 개념도. 물리 메모리에 빈 조각이 흩어져 있어도 모든 블록 크기가 16토큰으로 동일하므로 물리 블록 7, 1, 3을 비연속적으로 매핑하여 외부 단편화를 0%로 제거합니다. 출처: 직접 제작*
 
-![논문 Figure 6: 블록 테이블 매핑 구조](../assets/07-vllm-basics/pagedattention-original-figure-06-block-table.png)
+![논문 Figure 6: 블록 테이블 매핑 구조](../assets/08-vllm-basics/pagedattention-original-figure-06-block-table.png)
 
-*그림 7-8. 논리 블록 0, 1, 2가 블록 테이블을 통해 비연속적인 물리 블록 7, 1, 3으로 매핑되는 과정. 출처: [1] Figure 6*
+*그림 8-8. 논리 블록 0, 1, 2가 블록 테이블을 통해 비연속적인 물리 블록 7, 1, 3으로 매핑되는 과정. 출처: [1] Figure 6*
 
 #### 물리 블록에 참조 카운트(ref_count)를 유지하는 이유
 
@@ -170,13 +170,13 @@ PagedAttention에서는 동일한 프롬프트를 가진 여러 시퀀스나 요
 3. **Prefix Caching의 지연 무효화 (Lazy Eviction) 구현**:
    - 모든 요청이 종료되어 `ref_count`가 `0`이 된 블록이라도 데이터와 해시값을 즉시 삭제하지 않고 가용 풀에 그대로 유지합니다. 다른 요청이 새 블록을 할당받아 덮어쓰기 전에 동일한 시스템 프롬프트 요청이 다시 들어오면, `ref_count`만 `0 -> 1`로 올리고 연산 없이 캐시를 즉시 재사용합니다 [3] [4].
 
-![공유 prefix 블록과 Copy-on-Write 개념](../assets/07-vllm-basics/prefix-sharing-copy-on-write.png)
+![공유 prefix 블록과 Copy-on-Write 개념](../assets/08-vllm-basics/prefix-sharing-copy-on-write.png)
 
-*그림 7-9. 공통 프롬프트 구간인 블록 0과 1은 물리 블록을 공유하고 토큰이 갈라지는 블록 2에서만 Copy-on-Write가 발동하여 별도 물리 블록으로 분기하는 구조. 출처: 직접 제작*
+*그림 8-9. 공통 프롬프트 구간인 블록 0과 1은 물리 블록을 공유하고 토큰이 갈라지는 블록 2에서만 Copy-on-Write가 발동하여 별도 물리 블록으로 분기하는 구조. 출처: 직접 제작*
 
-![물리 KV 블록의 참조 카운트(ref_count) 생명주기와 Copy-on-Write 구조도](../assets/07-vllm-basics/ref-count-lifecycle-cow.png)
+![물리 KV 블록의 참조 카운트(ref_count) 생명주기와 Copy-on-Write 구조도](../assets/08-vllm-basics/ref-count-lifecycle-cow.png)
 
-*그림 7-10. 물리 KV 블록의 참조 카운트(`ref_count`) 5단계 생명주기(① `0->1` 단독 할당, ② `1->2` 공유, ③ CoW 복제 분기, ④ `2->1` 시퀀스 A 선종료 시 시퀀스 B 보호, ⑤ `1->0` 시퀀스 B 종료 후 가용 풀 반환) 구조도. 출처: 직접 제작*
+*그림 8-10. 물리 KV 블록의 참조 카운트(`ref_count`) 5단계 생명주기(① `0->1` 단독 할당, ② `1->2` 공유, ③ CoW 복제 분기, ④ `2->1` 시퀀스 A 선종료 시 시퀀스 B 보호, ⑤ `1->0` 시퀀스 B 종료 후 가용 풀 반환) 구조도. 출처: 직접 제작*
 
 ### 2.3 KV 캐시 매니저 심층 분석: 블록 크기(16)와 선점 정책
 
@@ -233,9 +233,9 @@ $$\text{블록 1개당 메모리 (Bytes)} = 2 \times \text{num\_layers} \times \
 
 #### 정적 배칭 vs 연속 배칭 (Iteration-Level Scheduling)
 
-![정적 배칭과 연속 배칭 시간축 비교](../assets/07-vllm-basics/continuous-batching-timeline.png)
+![정적 배칭과 연속 배칭 시간축 비교](../assets/08-vllm-basics/continuous-batching-timeline.png)
 
-*그림 7-11. 정적 배칭과 연속 배칭의 시간축 비교. 연속 배칭은 매 스텝(Iteration)마다 종료된 요청(A, B)의 블록을 즉시 회수하고 대기 중인 새 요청(D, E)을 투입합니다. 출처: 직접 제작*
+*그림 8-11. 정적 배칭과 연속 배칭의 시간축 비교. 연속 배칭은 매 스텝(Iteration)마다 종료된 요청(A, B)의 블록을 즉시 회수하고 대기 중인 새 요청(D, E)을 투입합니다. 출처: 직접 제작*
 
 | 비교 항목 | 정적 배칭 (Static Batching) | 연속 배칭 (Continuous Batching, Orca / vLLM) |
 |---|---|---|
@@ -248,9 +248,9 @@ $$\text{블록 1개당 메모리 (Bytes)} = 2 \times \text{num\_layers} \times \
 
 단일 GPU 환경에서도 배치 추론을 통한 속도 향상 효과가 크게 나타나는 이유는 다음과 같습니다 [3] [2].
 
-![단일 GPU 배치 추론 내부 동작 원리](../assets/07-vllm-basics/single-gpu-batch-inference-ppt.png)
+![단일 GPU 배치 추론 내부 동작 원리](../assets/08-vllm-basics/single-gpu-batch-inference-ppt.png)
 
-*그림 7-12. 단일 GPU 배치 추론의 내부 동작 원리. 출처: 직접 제작*
+*그림 8-12. 단일 GPU 배치 추론의 내부 동작 원리. 출처: 직접 제작*
 
 1. **가중치 1회 로드로 $N$개 요청 동시 행렬 곱셈 (GEMV $\to$ GEMM 전환)**:
    - 디코딩 단계에서 가장 오래 걸리는 작업은 수십 GB의 모델 가중치(예: 16GB)를 느린 HBM에서 연산 코어(SRAM)로 읽어 오는 메모리 전달 시간입니다.
@@ -304,9 +304,9 @@ llm = LLM(
 
 #### V1 엔진 구조도와 컴포넌트 책임 분리
 
-![vLLM V1 전체 아키텍처 다이어그램](../assets/07-vllm-basics/vllm-v1-full-architecture.png)
+![vLLM V1 전체 아키텍처 다이어그램](../assets/08-vllm-basics/vllm-v1-full-architecture.png)
 
-*그림 7-13. vLLM V1의 컴포넌트 간 책임 분리 구조. CPU는 스케줄링과 논리·물리 블록 매핑 장부를 관리하고, GPU Worker는 실제 텐서 연산과 물리 KV 캐시 읽고 쓰기를 전담합니다. 출처: 직접 제작*
+*그림 8-13. vLLM V1의 컴포넌트 간 책임 분리 구조. CPU는 스케줄링과 논리·물리 블록 매핑 장부를 관리하고, GPU Worker는 실제 텐서 연산과 물리 KV 캐시 읽고 쓰기를 전담합니다. 출처: 직접 제작*
 
 | 컴포넌트 | 실행 위치 | 핵심 책임 | 주요 입출력 |
 |---|---|---|---|
@@ -319,23 +319,23 @@ llm = LLM(
 
 #### 다중 GPU 환경에서 중앙 블록 매니저가 1개만 존재하는 이유
 
-![SOSP 2023 논문 Figure 4. vLLM system overview](../assets/07-vllm-basics/vllm-system-overview-fig4.png)
+![SOSP 2023 논문 Figure 4. vLLM system overview](../assets/08-vllm-basics/vllm-system-overview-fig4.png)
 
-*그림 7-14. vLLM 시스템 전체 구조도. 출처: [1] Figure 4*
+*그림 8-14. vLLM 시스템 전체 구조도. 출처: [1] Figure 4*
 
 vLLM 아키텍처의 핵심 설계 원칙은 두뇌(스케줄링 및 블록 주소 계산: CPU)와 근육(대규모 행렬 연산 및 물리 VRAM 저장: GPU Workers)을 명확히 분리한 **중앙 집중형 제어 평면(Centralized Control Plane) + 분산 데이터 평면(Distributed Data Plane)** 구조에 있습니다 [1] [5].
 
-![Centralized Control Plane + Distributed Data Plane 구조도](../assets/07-vllm-basics/control-data-plane.png)
+![Centralized Control Plane + Distributed Data Plane 구조도](../assets/08-vllm-basics/control-data-plane.png)
 
-*그림 7-15. CPU 중앙 제어부(Scheduler, KV Cache Manager, Block Allocator)가 Input IDs와 Block Table을 브로드캐스트하면 각 GPU Worker의 Cache Engine이 동일한 물리 블록 번호에 자기 Shard 몫의 KV를 저장하는 구조. 출처: 직접 제작*
+*그림 8-15. CPU 중앙 제어부(Scheduler, KV Cache Manager, Block Allocator)가 Input IDs와 Block Table을 브로드캐스트하면 각 GPU Worker의 Cache Engine이 동일한 물리 블록 번호에 자기 Shard 몫의 KV를 저장하는 구조. 출처: 직접 제작*
 
 > **SPMD (Single Program, Multiple Data)와 Zero Synchronization Overhead**
 >
 > SPMD는 모든 GPU 워커가 100% 동일한 프로그램(같은 실행 코드, 같은 입력 토큰 시퀀스, 같은 블록 번호표 `[7, 1, 3]`)을 동시에 실행하되, 각자 맡은 데이터 조각(모델 가중치 및 Attention Head 샤드)만 나누어 처리하는 병렬 실행 모델입니다 [3].
 
-![TP 환경에서 모든 GPU가 같은 블록 테이블을 공유하는 구조](../assets/07-vllm-basics/spmd-same-block-table.png)
+![TP 환경에서 모든 GPU가 같은 블록 테이블을 공유하는 구조](../assets/08-vllm-basics/spmd-same-block-table.png)
 
-*그림 7-16. CPU가 블록 테이블 `[7, 1, 3]` 1장을 모든 GPU에 똑같이 전달하면 GPU 0은 Head 0~7의 KV를, GPU 1은 Head 8~15의 KV를 각자 VRAM의 동일한 번호 칸(`#7, #1, #3`)에 저장하는 구조. 출처: 직접 제작*
+*그림 8-16. CPU가 블록 테이블 `[7, 1, 3]` 1장을 모든 GPU에 똑같이 전달하면 GPU 0은 Head 0~7의 KV를, GPU 1은 Head 8~15의 KV를 각자 VRAM의 동일한 번호 칸(`#7, #1, #3`)에 저장하는 구조. 출처: 직접 제작*
 
 1. **완벽한 SPMD 대칭성**:
    - 텐서 병렬화(TP)에서 `Worker 0`부터 `Worker N-1`까지는 모델의 Attention Head(가중치 열/행)만 쪼개어 가질 뿐, 매 스텝 처리하는 요청과 토큰의 개수 및 순서는 모든 GPU에서 100% 동일합니다.
@@ -346,9 +346,9 @@ vLLM 아키텍처의 핵심 설계 원칙은 두뇌(스케줄링 및 블록 주�
 
 #### V1 엔진 초기화 3단계와 메모리 예산 프로파일링 (Workspace의 의미)
 
-![초기화 시 메모리 예산 측정 및 KV 풀 할당 순서](../assets/07-vllm-basics/vllm-kv-initialization-budget.png)
+![초기화 시 메모리 예산 측정 및 KV 풀 할당 순서](../assets/08-vllm-basics/vllm-kv-initialization-budget.png)
 
-*그림 7-17. 워커 초기화 시 더미 Forward 실행으로 가중치·Activation·Workspace 피크 메모리를 먼저 실측하여 차감한 뒤 남은 가용 VRAM 전체를 고정 크기 물리 KV 블록 풀로 일괄 할당하는 과정. 출처: 직접 제작*
+*그림 8-17. 워커 초기화 시 더미 Forward 실행으로 가중치·Activation·Workspace 피크 메모리를 먼저 실측하여 차감한 뒤 남은 가용 VRAM 전체를 고정 크기 물리 KV 블록 풀로 일괄 할당하는 과정. 출처: 직접 제작*
 
 1. **1단계 (디바이스 초기화)**: CUDA 컨텍스트와 NCCL 분산 통신 그룹을 생성하고, `GPUModelRunner`와 CPU 측 `InputBatch` 버퍼를 초기화합니다 [3] [4].
 2. **2단계 (모델 로드)**: 모델 가중치를 분할(TP/PP)하거나 양자화 재포장(`Weight Repacking`)하여 GPU VRAM에 적재합니다 (`model.eval()`).
@@ -362,9 +362,9 @@ vLLM 아키텍처의 핵심 설계 원칙은 두뇌(스케줄링 및 블록 주�
 
 #### 토큰 예산(FLOPs) vs KV 캐시 용량(Memory)의 독립적 2단계 검사
 
-![스케줄러의 토큰 예산과 KV 용량 검사](../assets/07-vllm-basics/scheduler-token-kv-budget.png)
+![스케줄러의 토큰 예산과 KV 용량 검사](../assets/08-vllm-basics/scheduler-token-kv-budget.png)
 
-*그림 7-18. 스케줄러가 매 스텝 `running` 큐의 요청부터 시작하여 ① 계산 예산(토큰 수) 관문과 ② 저장 공간(빈 KV 블록) 관문을 순서대로 통과시키는 과정. 출처: 직접 제작*
+*그림 8-18. 스케줄러가 매 스텝 `running` 큐의 요청부터 시작하여 ① 계산 예산(토큰 수) 관문과 ② 저장 공간(빈 KV 블록) 관문을 순서대로 통과시키는 과정. 출처: 직접 제작*
 
 토큰 예산과 KV 캐시 블록 공간을 따로 검사해야 하는 이유는 **이번 스텝에 새로 계산할 토큰 수(연산량)**와 **지금까지 대화하며 VRAM에 쌓아 둔 누적 토큰 수(메모리 용량)**가 비례하지 않기 때문입니다. 예를 들어 이미 8,000토큰을 주고받은 디코딩 요청 `A`는 이번 스텝에 새로 계산할 토큰이 단 1개(예산 1칸)뿐이지만, VRAM에서는 8,000토큰분의 KV 블록을 차지하고 있습니다 [3].
 
@@ -377,13 +377,13 @@ vLLM 아키텍처의 핵심 설계 원칙은 두뇌(스케줄링 및 블록 주�
 
 디코딩 도중 빈 물리 블록이 바닥났을 때, 스케줄러는 다음 세 가지 원칙에 따라 자원을 확보합니다 [3] [4].
 
-![VRAM 고갈 시 스케줄러의 3단계 자원 확보 및 선점 흐름도](../assets/07-vllm-basics/preemption-decision-flow.png)
+![VRAM 고갈 시 스케줄러의 3단계 자원 확보 및 선점 흐름도](../assets/08-vllm-basics/preemption-decision-flow.png)
 
-*그림 7-19. VRAM 고갈 시 스케줄러의 3단계 자원 확보 및 선점 흐름도. 출처: 직접 제작*
+*그림 8-19. VRAM 고갈 시 스케줄러의 3단계 자원 확보 및 선점 흐름도. 출처: 직접 제작*
 
-![선점 및 재계산 흐름도](../assets/07-vllm-basics/kv-preemption-recompute.png)
+![선점 및 재계산 흐름도](../assets/08-vllm-basics/kv-preemption-recompute.png)
 
-*그림 7-20. 선점된 희생양 요청이 보유 블록을 모두 반환하고 `waiting` 큐로 돌아간 뒤 이후 블록 여유가 생겼을 때 병렬 Prefill(`Recompute`)로 일괄 복구되는 흐름도. 출처: 직접 제작*
+*그림 8-20. 선점된 희생양 요청이 보유 블록을 모두 반환하고 `waiting` 큐로 돌아간 뒤 이후 블록 여유가 생겼을 때 병렬 Prefill(`Recompute`)로 일괄 복구되는 흐름도. 출처: 직접 제작*
 
 1. **원칙 1: 미사용 프리픽스 캐시 블록 LRU 최우선 회수 (`ref_count == 0`)**:
    - 현재 실행 중인 요청을 중단시키기 전에, 이미 종료된 이전 요청들이 캐시 재사용을 위해 남겨 둔 블록(`ref_count == 0`) 중 가장 오래전에 사용된 것(LRU, Least Recently Used)부터 먼저 덮어써서 할당합니다.
@@ -398,9 +398,9 @@ vLLM 아키텍처의 핵심 설계 원칙은 두뇌(스케줄링 및 블록 주�
 
 #### 슈퍼 시퀀스 평탄화 시 문장 간 격리 원리와 `slot_mapping` 시작 오프셋
 
-![Aleksa Gordić 원본 다이어그램: fwd_pass.png](../assets/07-vllm-basics/fwd-pass-original.png)
+![Aleksa Gordić 원본 다이어그램: fwd_pass.png](../assets/08-vllm-basics/fwd-pass-original.png)
 
-*그림 7-21. V1 Forward 패스 다이어그램. 길이가 5, 7, 3인 세 문장을 빈칸 패딩(`PAD`) 없이 길이 15짜리 1차원 슈퍼 시퀀스로 평탄화하여 처리합니다. 출처: [3]*
+*그림 8-21. V1 Forward 패스 다이어그램. 길이가 5, 7, 3인 세 문장을 빈칸 패딩(`PAD`) 없이 길이 15짜리 1차원 슈퍼 시퀀스로 평탄화하여 처리합니다. 출처: [3]*
 
 > **다이어그램에서 `slot_mapping` 값이 `0, 1, 2, 3`이 아니라 `4`부터 시작하고 중간에 `9, 10, 11`이나 `19`가 건너뛰는 이유**
 >
@@ -420,9 +420,9 @@ vLLM 아키텍처의 핵심 설계 원칙은 두뇌(스케줄링 및 블록 주�
 
 #### 프로세스 간 통신 (ZMQ IPC, RPC, Shared Memory Queue)
 
-![온라인 서빙 프로세스 IPC 다이어그램](../assets/07-vllm-basics/vllm-online-process-ipc.png)
+![온라인 서빙 프로세스 IPC 다이어그램](../assets/08-vllm-basics/vllm-online-process-ipc.png)
 
-*그림 7-22. 파이썬 GIL 병목을 제거하기 위해 분리된 3대 프로세스(Frontend, EngineCoreProc, GPU Workers)와 ZMQ IPC 및 공유 메모리 큐 통신 구조. 출처: 직접 제작*
+*그림 8-22. 파이썬 GIL 병목을 제거하기 위해 분리된 3대 프로세스(Frontend, EngineCoreProc, GPU Workers)와 ZMQ IPC 및 공유 메모리 큐 통신 구조. 출처: 직접 제작*
 
 파이썬의 GIL(Global Interpreter Lock, 하나의 프로세스 안에서 한 번에 1개의 파이썬 스레드만 실행 허용) 때문에 HTTP 요청 처리, 스케줄링, GPU 실행을 한 프로세스에 넣으면 CPU가 병목이 되어 GPU가 유휴 상태에 빠집니다. 이를 해결하기 위해 vLLM V1은 역할을 ① 카운터(`Frontend`), ② 주방장(`EngineCoreProc`), ③ 요리사(`GPU Workers`)의 독립 프로세스로 분리했습니다 [3] [4].
 
@@ -435,9 +435,9 @@ vLLM 아키텍처의 핵심 설계 원칙은 두뇌(스케줄링 및 블록 주�
 
 #### 병렬화 4대 축: TP, PP, DP, EP 비교
 
-![병렬화 기법 TP, PP, DP, EP 비교](../assets/07-vllm-basics/parallelism-tp-pp-dp-ep.png)
+![병렬화 기법 TP, PP, DP, EP 비교](../assets/08-vllm-basics/parallelism-tp-pp-dp-ep.png)
 
-*그림 7-23. 모델 가중치, 레이어, 요청 데이터, MoE 전문가를 분할하는 4가지 병렬화 방식. 출처: 직접 제작*
+*그림 8-23. 모델 가중치, 레이어, 요청 데이터, MoE 전문가를 분할하는 4가지 병렬화 방식. 출처: 직접 제작*
 
 | 병렬화 방식 | 분할 대상 | 주요 통신 패턴 및 병목 | 주 적용 환경 |
 |---|---|---|---|
@@ -549,9 +549,9 @@ vllm serve meta-llama/Llama-3.1-405B-Instruct --tensor-parallel-size 8 --pipelin
 
 ### 4.3 추측적 디코딩(Speculative) 및 구조화 출력(Guided FSM)
 
-![추측적 디코딩과 구조화 출력 동작 원리](../assets/07-vllm-basics/speculative-and-guided-fsm.png)
+![추측적 디코딩과 구조화 출력 동작 원리](../assets/08-vllm-basics/speculative-and-guided-fsm.png)
 
-*그림 7-24. 추측적 디코딩(가벼운 Draft가 $k$개 토큰을 추측하고 무거운 Target이 1회 Forward로 일괄 검증)과 구조화 출력(XGrammar FSM 비트마스크로 문법 위반 토큰을 원천 차단)의 동작 원리. 출처: 직접 제작*
+*그림 8-24. 추측적 디코딩(가벼운 Draft가 $k$개 토큰을 추측하고 무거운 Target이 1회 Forward로 일괄 검증)과 구조화 출력(XGrammar FSM 비트마스크로 문법 위반 토큰을 원천 차단)의 동작 원리. 출처: 직접 제작*
 
 - **추측적 디코딩 (Speculative Decoding)**:
   - 디코딩 단계는 메모리 대역폭이 병목이라 토큰 1개를 넣든 5개를 묶어 넣든 거대 모델(Target)의 가중치를 1번 읽어 오는 시간은 거의 같습니다.
@@ -562,9 +562,9 @@ vllm serve meta-llama/Llama-3.1-405B-Instruct --tensor-parallel-size 8 --pipelin
 
 ### 4.4 Prefill/Decode 분리(Disaggregated P/D) 및 내부 코드 이원화
 
-![Prefill과 Decode 인스턴스 분리 아키텍처](../assets/07-vllm-basics/prefill-decode-disaggregation.png)
+![Prefill과 Decode 인스턴스 분리 아키텍처](../assets/08-vllm-basics/prefill-decode-disaggregation.png)
 
-*그림 7-25. Prefill 전용 vLLM 인스턴스에서 생성된 초기 KV 캐시 블록을 고속 인터커넥트(NVLink / RDMA / NIXL)를 통해 Decode 전용 vLLM 인스턴스로 전송하는 Disaggregated P/D 구조. 출처: 직접 제작*
+*그림 8-25. Prefill 전용 vLLM 인스턴스에서 생성된 초기 KV 캐시 블록을 고속 인터커넥트(NVLink / RDMA / NIXL)를 통해 Decode 전용 vLLM 인스턴스로 전송하는 Disaggregated P/D 구조. 출처: 직접 제작*
 
 #### 클러스터 수준의 Disaggregated P/D: 소프트웨어 프로세스와 물리 서버 구성
 

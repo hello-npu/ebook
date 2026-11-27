@@ -7,6 +7,7 @@
   * [04. Low Precision & Quantization: 성능과 효율 사이](pages/04-low-precision-and-quantization.md)
   * [05. RBLN SDK 시작하기: Hello, NPU!](pages/05-rbln-sdk.md)
 * [2부 · AI 모델](pages/part2-ai-models.md)
+  * [06. AI 추론과 LLM 추론: Prefill, Decode, KV 캐시](pages/06-ai-llm-inference.md)
   * [07. NLP 모델 구동기 및 벤치마크 성능 비교](pages/07-nlp-models.md)
   * [08. LLM과 vLLM 이해하기](pages/08-vllm-basics.md)
 * [3부 · 응용 사례](pages/part3-applications.md)
